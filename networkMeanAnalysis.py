@@ -2,7 +2,7 @@
 Analysis of the network mean timeseries.
 """
 
-# import functions
+# import Python packages
 from datetime import datetime
 import pandas as pd
 import numpy as np
