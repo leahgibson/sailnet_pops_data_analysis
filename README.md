@@ -18,6 +18,8 @@ This is the code that I have used for all data analysis thus far, and my hope is
 To use this code, download all postcorrected and cleaned POPS data from the ARM Data Discovery and put in a directory within the sailnet_pops_data_analysis directory called ''data''.
 From there, all analysis can be done in the main.py file.
 
+This code is still a work in progress.
+
 
 
 
