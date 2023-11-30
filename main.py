@@ -6,17 +6,19 @@ https://adc.arm.gov/discovery/#/results/iopShortName::amf2021SAILCAIVIMT/instrum
 as netCDF files.
 """
 
+#### DO I NEED TO DETREND DATA TO SEE COV...idea: normalize data by taking difference and look at timeseries and cov###
+
 # import packages
 from dataHandling import dataRetrival, dataGroupings
 from networkMeanAnalysis import basicVisualization, temporalAnalysis
-from spatialAnalysis import spatialVariability, networkDesign
+from spatialAnalysis import timeseriesVisualization, spatialVariability, networkDesign
 
 
 # set up date range and sites for analysis
-start_date = '20220620'
-end_date = '20220701'
+start_date = '20211010'
+end_date = '20230722'
 
-sites = ['cbtop', 'cbmid']
+sites = ['cbmid', 'gothic', 'pumphouse', 'snodgrass', 'irwin', 'cbtop']
 
 # load data
 dr = dataRetrival()
@@ -26,23 +28,50 @@ data_dict = dr.create_datasets(sites, start_date, end_date, subsample=12)
 grouping = dataGroupings()
 grouped_dict = {}
 for site in sites:
-    grouped_dict[site] = grouping.temporal_grouping(data_dict[site], '30Min')
+    grouped_dict[site] = grouping.temporal_grouping(data_dict[site], '1D')
+
 
 
 # get network mean
 network_df = grouping.network_mean(grouped_dict)
 
+network_grouped = grouping.bin_groupings(network_df, grouping_option=2)
 
-# group data
-group = grouping.bin_groupings(network_df, grouping_option=1)
+data_groupings = dataGroupings()
+
+group = {}
+for site in sites:
+    group[site] = data_groupings.bin_groupings(grouped_dict[site], grouping_option=2)
+
 
 
 sv = spatialVariability()
-cv = sv.coefficient_of_variation(grouped_dict, ['b3', 'b4'])
-print(cv)
+cv = sv.coefficient_of_variation(group, bin_names=['dn_170_3400'], rolling=5, sum_headers=False)
+# cv = sv.coefficient_of_variation(group, bin_names=['dn_170_300', 'dn_300_870', 'dn_870_3400'], rolling=7, sum_headers=False)
+# cv = sv.coefficient_of_variation(group, bin_names=['dn_170_300', 'dn_300_870', 'dn_870_3400'], rolling=7)
 
-ta = temporalAnalysis()
-ta.plot_monthly_diurnal(cv, bin_names=['b3', 'b4'])
+
+vis = timeseriesVisualization()
+vis.plot_timeseries_together(group, bin_name='dn_170_3400')
+
+
+
+
+
+
+
+
+
+
+
+# sv.sudo_variogram(grouped_dict, ['b3', 'b4', 'b5'], distance_type='euclidean', sum_headers=False)
+
+# ta = temporalAnalysis()
+# ta.plot_monthly_diurnal(cv, bin_names=['b3', 'b4'])
+
+# network = networkDesign(grouped_dict, bin_headers=['b4', 'b5', 'b6'])
+# network.plot_representation_timeseries()
+# network.plot_representation_bars()
 
 
 

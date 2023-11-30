@@ -229,13 +229,13 @@ class dataGroupings:
         """
         Groups bins for analysis by summing bins.
 
-        If one of the bins doesn't contain dta, the result of the sum is also empty.
+        If one of the bins doesn't contain data, the result of the sum is also empty.
         
         Inputs:
         - df: df of data
         - grouping_option: int, accepts 1, 2, or 3 corresponding to the three options below:
-            - option 1: dn_140_170, dn_170_200, dn_200_300, dn_300_870, dn_870_3400, total
-            - option 2: dn_140_170, dn_170_300, dn_870_3400, total
+            - option 1: dn_140_170, dn_170_200, dn_200_300, dn_300_870, dn_870_3400, dn_170_3400, total
+            - option 2: dn_140_155, dn_155_170, dn_170_300, dn_870_3400, dn_170_3400, total
             - option 3: submicron, supermicron, total
         
         Returns: df of binned data
@@ -251,6 +251,7 @@ class dataGroupings:
             grouped_df['dn_200_300'] = df[['b4', 'b5', 'b6']].sum(axis=1, skipna=False)
             grouped_df['dn_300_870'] = df[['b7', 'b8', 'b9', 'b10']].sum(axis=1, skipna=False)
             grouped_df['dn_870_3400'] = df[['b' + str(i) for i in range(11,16)]].sum(axis=1, skipna=False)
+            grouped_df['dn_170_3400'] = df[['b' + str(i) for i in range(2,16)]].sum(axis=1, skipna=False)
             grouped_df['total'] = df[bins].sum(axis=1, skipna=False)
         
         if grouping_option == 2:
@@ -260,6 +261,8 @@ class dataGroupings:
             grouped_df['dn_170_300'] = df[['b2', 'b3', 'b4', 'b5', 'b6']].sum(axis=1, skipna=False)
             grouped_df['dn_300_870'] = df[['b7', 'b8', 'b9', 'b10']].sum(axis=1, skipna=False)
             grouped_df['dn_870_3400'] = df[['b11', 'b12', 'b13', 'b14', 'b15']].sum(axis=1, skipna=False)
+            grouped_df['dn_170_3400'] = df[['b' + str(i) for i in range(2,16)]].sum(axis=1, skipna=False)
+            grouped_df['total'] = df[bins].sum(axis=1, skipna=False)
         
         if grouping_option == 3:
             grouped_df['DateTime'] = df['DateTime']

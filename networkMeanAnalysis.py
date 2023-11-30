@@ -7,6 +7,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 # Set the font size for different plot elements
 plt.rcParams.update({
@@ -26,20 +27,30 @@ class basicVisualization:
     def __init__(self):
         pass
 
-    def plot_timeseries(self, df, bin_name):
+    def plot_network_timeseries(self, df, bin_name, rolling=None):
         """
         Basic plotting of network mean for specified bin.
 
         Inputs:
         - df: df of network mean
         - bin_name: name of bin to be plotted
+        - rolling: default None or int for number of values to use in a rolling mean
 
         Output: plot
 
         Returns: None
         """
 
-        plt.plot(df['DateTime'], df[bin_name])
+
+        if rolling is not None:
+            timeseries_df = df.rolling(window=rolling, min_periods=1).mean()
+            timeseries_df['DateTime'] = df['DateTime']
+        else:
+            timeseries_df = df
+
+
+        plt.plot(timeseries_df['DateTime'], timeseries_df[bin_name])
+        plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
         plt.title(bin_name)
         plt.ylabel('cm$^{-3}$')
         plt.show()
