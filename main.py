@@ -46,20 +46,14 @@ for site in sites:
 
 
 sv = spatialVariability()
-cv = sv.coefficient_of_variation(group, bin_names=['dn_170_3400'], rolling=5, sum_headers=False)
+sv.sudo_variogram(group, bin_names=['dn_170_300', 'dn_300_870', 'dn_870_3400'], distance_type='horizontal', sum_headers=False)
+# cv = sv.coefficient_of_variation(group, bin_names=['dn_170_3400'], rolling=5, sum_headers=False)
 # cv = sv.coefficient_of_variation(group, bin_names=['dn_170_300', 'dn_300_870', 'dn_870_3400'], rolling=7, sum_headers=False)
 # cv = sv.coefficient_of_variation(group, bin_names=['dn_170_300', 'dn_300_870', 'dn_870_3400'], rolling=7)
 
 
-vis = timeseriesVisualization()
-vis.plot_timeseries_together(group, bin_name='dn_170_3400')
-
-
-
-
-
-
-
+# vis = timeseriesVisualization()
+# vis.plot_timeseries_together(group, bin_name='dn_170_3400')
 
 
 
@@ -69,7 +63,7 @@ vis.plot_timeseries_together(group, bin_name='dn_170_3400')
 # ta = temporalAnalysis()
 # ta.plot_monthly_diurnal(cv, bin_names=['b3', 'b4'])
 
-# network = networkDesign(grouped_dict, bin_headers=['b4', 'b5', 'b6'])
+# network = networkDesign(group, bin_headers=['dn_170_300', 'dn_300_870', 'dn_870_3400'])
 # network.plot_representation_timeseries()
 # network.plot_representation_bars()
 

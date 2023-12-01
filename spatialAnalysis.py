@@ -298,7 +298,10 @@ class spatialVariability:
             plt.show()
         
         else:
-            for bin in bin_names:
+        
+            fig, axs = plt.subplots(ncols=len(bin_names), sharey=True)
+            colors=['b', 'g', 'r']
+            for i, bin in enumerate(bin_names):
                 # create single df
                 data = pd.DataFrame()
                 sites = []
@@ -343,17 +346,19 @@ class spatialVariability:
                 #     plt.plot(distances_list, row, marker='o', linestyle='None', color='gray', alpha=0.5)
                     
                 # plot avg diffs
-                plt.plot(distances_list, mean_diffs, marker='o', markersize='26', linestyle='None', color='green')
+                axs[i].plot(distances_list, mean_diffs, marker='o', markersize='26', linestyle='None', color=colors[i])
                 # do linear regressions
                 slope, intercept, r_value, p_value, std_err = stats.linregress(distances_list, mean_diffs)
                 print('slope=',slope,'intercept=', intercept)
                 print('mean diffs=', mean_diffs)
                 regression_line = [slope*x + intercept for x in distances_list]
-                plt.plot(distances_list, regression_line, color='black', linewidth=5)
-                plt.title(bin + ' r-value ' + str(round(r_value, 2)))
-                plt.xlabel(distance_name)
-                plt.ylabel('Percent Difference')
-                plt.show()
+                axs[i].plot(distances_list, regression_line, color='black', linewidth=5)
+                axs[i].set_title(bin + ' r-value ' + str(round(r_value, 2)))
+                if i==np.floor(len(bin_names)/2):
+                    axs[i].set_xlabel(distance_name)
+                if i==0:
+                    axs[i].set_ylabel('Percent Difference')
+            plt.show()
 
     def plot_sitess_monthly_diurnal(self, dict_of_data, bin_name):
         """
