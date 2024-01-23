@@ -8,17 +8,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from geopy.distance import geodesic
+import matplotlib.dates as mdates
 from scipy import stats
 
-# # Set the font size for different plot elements
-# plt.rcParams.update({
-#     'font.size': 24,               # Font size for general text
-#     'axes.titlesize': 24,          # Font size for plot titles
-#     'axes.labelsize': 18,          # Font size for axis labels
-#     'xtick.labelsize': 18,         # Font size for x-axis ticks
-#     'ytick.labelsize': 18,         # Font size for y-axis ticks
-#     'legend.fontsize': 18,         # Font size for legend
-# })
+# Set the font size for different plot elements
+plt.rcParams.update({
+    'font.size': 10,               # Font size for general text
+    'axes.titlesize': 10,          # Font size for plot titles
+    'axes.labelsize': 10,          # Font size for axis labels
+    'xtick.labelsize': 10,         # Font size for x-axis ticks
+    'ytick.labelsize': 10,         # Font size for y-axis ticks
+    'legend.fontsize': 10,         # Font size for legend
+})
 
 class timeseriesVisualization:
     """
@@ -41,12 +42,18 @@ class timeseriesVisualization:
         Returns: none
         """
 
+        
+
         for site, df in dict_of_data.items():
-            plt.plot(df['DateTime'], df[bin_name], label=site)
+            df['DateTime'] = pd.to_datetime(df['DateTime'])
+            plt.plot(df['DateTime'], df[bin_name], linewidth=2,label=site)
+            
+        
         
         plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
         plt.legend()
         plt.ylabel('cm$^{-3}$')
+        plt.title('PM1.0')
         plt.show()
     
     def plot_timeseries_one_by_one(self, dict_of_data, bin_name):
@@ -346,14 +353,14 @@ class spatialVariability:
                 #     plt.plot(distances_list, row, marker='o', linestyle='None', color='gray', alpha=0.5)
                     
                 # plot avg diffs
-                axs[i].plot(distances_list, mean_diffs, marker='o', markersize='26', linestyle='None', color=colors[i])
+                axs[i].plot(distances_list, mean_diffs, marker='o', markersize='10', linestyle='None', color=colors[i])
                 # do linear regressions
                 slope, intercept, r_value, p_value, std_err = stats.linregress(distances_list, mean_diffs)
                 print('slope=',slope,'intercept=', intercept)
                 print('mean diffs=', mean_diffs)
                 regression_line = [slope*x + intercept for x in distances_list]
                 axs[i].plot(distances_list, regression_line, color='black', linewidth=5)
-                axs[i].set_title(bin + ' r-value ' + str(round(r_value, 2)))
+                axs[i].set_title(bin + ' r=' + str(round(r_value, 2)))
                 if i==np.floor(len(bin_names)/2):
                     axs[i].set_xlabel(distance_name)
                 if i==0:
@@ -538,7 +545,7 @@ class networkDesign:
                 axs[j].vlines(i+1, df[site].min(), df[site].max(), color=named_colors[i], linewidth=5, label=bin)
                 print('range', abs(df[site].min() - df[site].max()))
                 # plot dot for average
-                axs[j].plot(i+1, df[site].mean(), color=named_colors[i], marker='o', markersize=20)
+                axs[j].plot(i+1, df[site].mean(), color=named_colors[i], marker='o', markersize=10)
                 print('mean', df[site].mean())
                 # don't show x-ticks
                 axs[j].set_xticks([])
@@ -579,7 +586,7 @@ class networkDesign:
         # compute rep error
         for bin, df in representation_dict.items():
             # compute avg column
-            df['average'] = df.mean(axis=1)
+            df['average'] = df.mean(axis=1, skipna=False)
             for site in sites:
                 df[site] = (df[site] - df['average'])/df['average']
         

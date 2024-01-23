@@ -8,6 +8,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from matplotlib.lines import Line2D
+import matplotlib.colors as colors
+from scipy.stats import gaussian_kde
 
 # Set the font size for different plot elements
 plt.rcParams.update({
@@ -25,7 +28,29 @@ class basicVisualization:
     """
 
     def __init__(self):
-        pass
+        self.standard_bins = ['b' + str(i) for i in range(16)]
+        # for particle size distributions
+        # self.dlogdp = [0.03645458169, 0.03940255269, 0.04033092159, 0.03849895488,
+        #             0.03655010672, 0.04559350564, 0.08261548653, 0.06631586816,
+        #             0.15575785, 0.1008071129, 0.1428650493, 0.1524763279,
+        #             0.07769393472, 0.1571866015, 0.1130751916, 0.0867054262]
+        
+        # self.dlogdp = [0.035114496, 0.037103713, 0.040219114, 0.044828027, 0.050001836, 0.056403989, 0.129832168,
+        #   0.137674163, 0.078941363, 0.09085512, 0.177187651, 0.137678593, 0.096164793, 0.112758467,
+        #   0.107949615, 0.10986499]
+        
+        self.dlogdp = [0.03645458169, 0.03940255269, 0.04033092159, 0.03849895488,
+                    0.03655010672, 0.04559350564, 0.08261548653, 0.141566381,
+                    0.080507337, 0.1008071129, 0.1428650493, 0.1559862,
+                    0.112588743, 0.118781921, 0.1130751916, 0.0867054262]
+        
+
+        
+        # self.diameter_midpoints = [149, 163, 178, 195, 213, 234, 272, 322, 422, 561, 748,
+        #                     1054, 1358, 1802, 2440, 3062]
+        
+        self.diameter_midpoints = [149, 163, 178, 195, 213, 234, 272, 355, 455, 562, 749,
+                            1059, 1431, 1870, 2440, 3062]
 
     def plot_network_timeseries(self, df, bin_name, rolling=None):
         """
@@ -101,7 +126,119 @@ class basicVisualization:
         ax.set_xticks([tick[0] for tick in custom_ticks])
         ax.set_xticklabels([tick[1] for tick in custom_ticks])
         ax.set_title(bin_name)
+        ax.set_ylabel('cm$^{-3}$')
         plt.show()
+
+    def plot_psd(self, data, data2=None, data3=None):
+        """
+        Given the data, overages over all of it and plots a PSD 
+
+        Option for adding a second psd
+
+        Only takes 16 bin data
+        
+        Inputs:
+        - data: df of data
+        - data2: df of second data, default None
+        
+        Returns: none
+        
+        Outputs: plot of raw data, smoothed curve, and curve overlaying raw
+        
+        """
+
+        psd = []
+        for i, bin in enumerate(self.standard_bins):
+            bin_avg = data[bin].mean()
+            dndlogdp_val = bin_avg/self.dlogdp[i]
+            psd.append(dndlogdp_val)
+        
+        # plot raw distribution
+        plt.loglog(self.diameter_midpoints, psd, marker='o', color='black', label='2022-06-14')
+        
+        if data2 is not None:
+            psd2 = []
+            for i, bin in enumerate(self.standard_bins):
+                bin_avg = data2[bin].mean()
+                dndlogdp_val = bin_avg/self.dlogdp[i]
+                psd2.append(dndlogdp_val)
+            
+            plt.loglog(self.diameter_midpoints, psd2, marker='^', color='blue', label='2022-06-16')
+            plt.legend()
+        
+        if data3 is not None:
+            psd3 = []
+            for i, bin in enumerate(self.standard_bins):
+                bin_avg = data3[bin].mean()
+                dndlogdp_val = bin_avg/self.dlogdp[i]
+                psd3.append(dndlogdp_val)
+            
+            plt.plot(self.diameter_midpoints, psd3, marker='s', color='green', label='2023-05-23')
+            plt.legend()
+        
+        
+        
+        plt.ylabel('dN/dlogD$_p$')
+        plt.xlabel('Diameter (nm)')
+        plt.show()
+
+    def plot_different_time_segments(self, data1, data2, bin_name):
+        """
+        Accepts two dfs of same length and will plot on same plot.
+        
+        Data can be from different time periods.
+        
+        Inputs:
+        - data1: df of first timeseries
+        - data2: df of second timeseries
+        
+        Output: plot
+        
+        Returns: none
+        """
+
+        data1['DateTime'] = pd.to_datetime(data1['DateTime'])
+        data2['DateTime'] = pd.to_datetime(data2['DateTime'])
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111, label='1')
+        ax2 = fig.add_subplot(111, label='2', frame_on=False)
+
+        color1='black'
+        ax1.plot(data1['DateTime'], data1[bin_name], color=color1)
+        ax1.set_ylabel('cm$^{-3}$', color=color1)  
+        ax1.set_xlabel('Date', color=color1)
+        ax1.tick_params(axis='x', labelcolor=color1)
+        ax1.tick_params(axis='y', labelcolor=color1)
+
+        # second plot
+        color2='blue'
+        ax2.plot(data2['DateTime'], data2[bin_name], color=color2)
+        ax2.xaxis.tick_top()
+        ax2.yaxis.tick_right()
+        ax2.set_ylabel('cm$^{-3}$', color=color2)       
+        ax2.xaxis.set_label_position('top') 
+        ax2.yaxis.set_label_position('right') 
+        ax2.tick_params(axis='x', colors=color2)
+        ax2.tick_params(axis='y', colors=color2)
+
+        plt.show()
+
+
+        # # create secondary xaxis
+        # ax2 = ax1.twiny()
+        # ax2.plot(data2['DateTime'], data2[bin_name], color='magenta')
+        # ax2.tick_params(axis='x', labelcolor='magenta')
+
+        # # create secondary y-axis
+        # ax3 = ax1.twinx()
+        # ax3.plot(data1['DateTime'], data2[bin_name], color='magenta')
+        # ax3.tick_params(axis='y', labelcolor='magenta')
+
+
+
+        plt.show()
+
 
 
 
@@ -115,6 +252,24 @@ class temporalAnalysis:
         self.years = [2021, 2022, 2023]
         self.months = [1,2,3,4,5,6,7,8,9,10,11,12]
         self.standard_bins = ['b' + str(i) for i in range(16)]
+
+        # for particle size distributions
+        # self.dlogdp = [0.03645458169, 0.03940255269, 0.04033092159, 0.03849895488,
+        #             0.03655010672, 0.04559350564, 0.08261548653, 0.06631586816,
+        #             0.15575785, 0.1008071129, 0.1428650493, 0.1524763279,
+        #             0.07769393472, 0.1571866015, 0.1130751916, 0.0867054262]
+        
+        # self.diameter_midpoints = [149, 163, 178, 195, 213, 234, 272, 322, 422, 561, 748,
+        #                     1054, 1358, 1802, 2440, 3062]
+
+        self.dlogdp = [0.03645458169, 0.03940255269, 0.04033092159, 0.03849895488,
+                    0.03655010672, 0.04559350564, 0.08261548653, 0.141566381,
+                    0.080507337, 0.1008071129, 0.1428650493, 0.1559862,
+                    0.112588743, 0.118781921, 0.1130751916, 0.0867054262]
+        
+        self.diameter_midpoints = [149, 163, 178, 195, 213, 234, 272, 355, 455, 562, 749,
+                            1059, 1431, 1870, 2440, 3062]
+
         
 
     def plot_monthly_diurnal(self, data, bin_names):
@@ -152,22 +307,32 @@ class temporalAnalysis:
         
 
         fig, axs = plt.subplots(nrows=1, ncols=num_months, sharex=True, sharey=True)
+        colors=['blue', 'orange', 'green']
         for bin in bin_names:
-            i=0
+            idx = 0
             for year in self.years:
+                
                 for month in self.months:
                     try:
-                        axs[i].plot(daily_averages[bin][year][month].values, label=bin)
-                        axs[i].set_title(str(year)+'-'+str(month))
-                        axs[i].set_xticks([0, 23, 47])
-                        axs[i].set_xticklabels(['00:00', '12:00', '24:00'])
-
-                        if i==0:
-                            axs[i].legend()
+                        axs[month-1].plot(daily_averages[bin][year][month].values, label=bin, color=colors[idx])
+                        axs[month-1].set_title(str(year)+'-'+str(month))
+                        axs[month-1].set_xticks([0, 11, 23])
+                        axs[month-1].set_xticklabels(['00:00', '12:00', '24:00'])
                         
-                        i+=1
                     except:
                         pass
+                idx+=1
+        axs[0].set_ylabel('cm$^{-3}$')
+        
+        # Create custom handles and labels for the legend
+        legend_handles = [Line2D([0], [0], color='blue', lw=2),
+                        Line2D([0], [0], color='orange', lw=2),
+                        Line2D([0], [0], color='green', lw=2)]
+
+        legend_labels = ['2021', '2022', '2023']
+
+        # Create a legend with custom handles and labels
+        axs[0].legend(handles=legend_handles, labels=legend_labels, loc='upper right')
 
         
                 
@@ -188,13 +353,7 @@ class temporalAnalysis:
         Reutns: noone
         """
 
-        dlogdp = [0.03645458169, 0.03940255269, 0.04033092159, 0.03849895488,
-                    0.03655010672, 0.04559350564, 0.08261548653, 0.06631586816,
-                    0.15575785, 0.1008071129, 0.1428650493, 0.1524763279,
-                    0.07769393472, 0.1571866015, 0.1130751916, 0.0867054262]
         
-        diameter_midpoints = [149, 163, 178, 195, 213, 234, 272, 322, 422, 561, 748,
-                            1054, 1358, 1802, 2440, 3062]
         
         # make groups into months 
         data['DateTime'] = pd.to_datetime(data['DateTime'])
@@ -220,40 +379,63 @@ class temporalAnalysis:
             # compute average over the days in the month for each bin
             daily_avgs = data.groupby(['Year', 'Month', 'Day'])[bin].mean()
             # avg over months
-            for month in self.months:
-                if str(month) in psd_dict:
+            for year in self.years:
+                if str(year) in psd_dict:
                     pass
                 else:
-                    psd_dict[str(month)] = []
-                    normalized_psd[str(month)] = []
-                try:
-                    # compute monthly average of bin
-                    monthly_avg = np.mean(daily_avgs[2022][month])
-                    # convert to dndlogdp
-                    dndlogdp_val = monthly_avg/dlogdp[i]
-                    psd_dict[str(month)].append(dndlogdp_val)
+                    psd_dict[str(year)] = {}
+                    normalized_psd[str(year)] = {}
+                for month in self.months:
+                    if str(month) in psd_dict[str(year)]:
+                        pass
+                    else:
+                        psd_dict[str(year)][str(month)] = []
+                        normalized_psd[str(year)][str(month)] = []
+                    try:
+                        # compute monthly average of bin
+                        monthly_avg = np.mean(daily_avgs[year][month])
+                        # convert to dndlogdp
+                        dndlogdp_val = monthly_avg#/self.dlogdp[i]
+                        psd_dict[str(year)][str(month)].append(dndlogdp_val)
 
-                    # compute normalized average
-                    monthly_total = np.mean(total_averages[2022][month])
-                    normalized_bin = monthly_avg/monthly_total
-                    normalized_dndlogdp = normalized_bin/dlogdp[i]
-                    normalized_psd[str(month)].append(normalized_dndlogdp)
+                        # compute normalized average
+                        monthly_total = np.mean(total_averages[year][month])
+                        normalized_bin = monthly_avg/monthly_total
+                        normalized_dndlogdp = normalized_bin/self.dlogdp[i]
+                        normalized_psd[str(year)][str(month)].append(normalized_dndlogdp)
+            
+                    except:
+                        pass
+       
         
-                except:
-                    pass
+        month_names = ['Jan', 'Feb', 'March', 'April', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
         
          # plot the particle dize distributions
-        fig, axs = plt.subplots(nrows=1, ncols=num_months, sharex=True, sharey=True)
-        i=0
-        for month in self.months:
-            try:
-                axs[i].loglog(diameter_midpoints, psd_dict[str(month)])
-                axs[i].set_title('2022'+'-'+str(month))
+        fig, axs = plt.subplots(nrows=1, ncols=12, sharex=True, sharey=True)
+        year_colors = ['blue', 'orange', 'green']
+        idx=0
+        for year in self.years:
+            i=0
+            for month in self.months:
+                try:
+                    axs[month-1].loglog(self.diameter_midpoints, psd_dict[str(year)][str(month)], color=year_colors[idx], label=str(year))
+                    axs[month-1].set_title(month_names[(month)-1])
 
-                i+=1
-            except:
-                pass
-        axs[0].set_ylabel('dn/dlogdp')
+                    i+=1
+                except:
+                    pass
+            idx+=1
+        axs[0].set_ylabel('cm$^{-3}$')#('dn/dlogdp')
+        # Create custom handles and labels for the legend
+        legend_handles = [Line2D([0], [0], color='blue', lw=2),
+                        Line2D([0], [0], color='orange', lw=2),
+                        Line2D([0], [0], color='green', lw=2)]
+
+        legend_labels = ['2021', '2022', '2023']
+
+        # Create a legend with custom handles and labels
+        axs[0].legend(handles=legend_handles, labels=legend_labels, loc='upper right')
+
         axs[int(np.round(num_months/2))].set_xlabel('Diameter (nm)')
 
         
@@ -264,7 +446,7 @@ class temporalAnalysis:
         i=0
         for month in self.months:
             try:
-                axs[i].loglog(diameter_midpoints, normalized_psd[str(month)])
+                axs[i].loglog(self.diameter_midpoints, normalized_psd[str(month)])
                 axs[i].set_title('2022'+'-'+str(month))
 
                 i+=1
@@ -275,8 +457,61 @@ class temporalAnalysis:
 
         plt.show()
 
+    def plot_psd_timeseries(self, data):
+        """
+        Plots a colormap of the psd over time.
+        
+        Only works for the 16 bin structure
 
-    
+        Inputs:
+        - data: df of network mean data
+        
+        Returns: none
+
+        Output: colormap plot
+        """
+
+        # compute dn/dlogdp lavlues and reformat for plotting
+        dndlogdp_matrix = []
+        # rehape to [[bin0time0, bin0time1, ...',
+        #               bin1time0, bin1time1, ...], ...]
+        for i, bin in enumerate(self.standard_bins):
+            # compute dn/dlogdp for each bin
+            row = np.array((data[bin]/self.dlogdp[i]).tolist())
+            # remove values that are too small
+            dndlogdp_matrix.append(row)
+        
+        dndlogdp_matrix = np.array(dndlogdp_matrix)
+        
+        # set up meshgrid
+        diameters = self.diameter_midpoints
+        times = data['DateTime'].tolist()
+        #times, diameters = np.meshgrid(data['DateTime'].tolist(), diameters)
+
+        # plot contour plot with log-y axis
+        contour_levels = np.logspace(np.log10(np.nanmin(dndlogdp_matrix)), np.log10(np.nanmax(dndlogdp_matrix)), 500)
+        plt.contourf(times, diameters, dndlogdp_matrix, norm=colors.LogNorm(), levels=contour_levels, cmap='jet')
+        plt.yscale('log')
+
+        # make sure colorbar shows
+        cbar = plt.colorbar()
+
+        # make cbar labels
+        cbar_ticks = np.logspace(np.ceil(np.log10(np.nanmin(dndlogdp_matrix))), np.floor(np.log10(np.nanmax(dndlogdp_matrix))), 6)
+        cbar.set_ticks(cbar_ticks)
+        cbar.set_ticklabels(['$10^{{{}}}$'.format(int(np.log10(tick))) for tick in cbar_ticks])
+
+        # make label for colorbar
+        cbar.ax.set_ylabel('dN/dlogD$_p$')
+
+        # y-axis label
+        plt.ylabel('D$_p$ (nm)')
+
+        plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
+
+
+        plt.show()
+ 
     def plot_monthly_bin_average(self, data, bin_names):
         """
         Plots the average value of the specified bins for each month.
@@ -330,8 +565,7 @@ class temporalAnalysis:
         plt.legend()
         plt.show()
                 
-
-
+  
 
 
 
