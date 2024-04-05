@@ -12,42 +12,54 @@ from dataHandling import dataRetrival, dataGroupings
 from networkMeanAnalysis import basicVisualization, temporalAnalysis
 from spatialAnalysis import timeseriesVisualization, spatialVariability, networkDesign
 
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import pandas as pd
+
 
 # set up date range and sites for analysis
-start_date = '20220614'
-end_date = '20220814'
+start_date = '20220611'
+end_date = '20220616'
 
 sites = ['snodgrass', 'cbtop', 'cbmid', 'gothic', 'pumphouse', 'irwin']
 
 # load data
 dr = dataRetrival()
-data_dict = dr.create_datasets(sites, start_date, end_date, subsample=12)
+data_dict = dr.create_datasets(sites, start_date, end_date, subsample=None)
 
 # time bin data
 grouping = dataGroupings()
-grouped_dict = {}
+grouped_dict_30M = {}
 for site in sites:
-    grouped_dict[site] = grouping.temporal_grouping(data_dict[site], '1H')
+    grouped_dict_30M[site] = grouping.temporal_grouping(data_dict[site], '30Min')
 
-bv = basicVisualization()
-bv.plot_psd(data = grouped_dict['snodgrass'])
-    
+cbtop_data = grouping.temporal_grouping(data_dict['snodgrass'], '30Min')
 
-# get network mean
-network_df = grouping.network_mean(grouped_dict)
+grouped_30M = grouping.bin_groupings(cbtop_data, grouping_option=2)
+grouped = grouping.bin_groupings(data_dict['snodgrass'], grouping_option=2)
 
-network_grouped = grouping.bin_groupings(network_df, grouping_option=3)
-
-
-data_groupings = dataGroupings()
-
-group = {}
-for site in sites:
-    group[site] = data_groupings.bin_groupings(grouped_dict[site], grouping_option=2)
+grouped_30M['DateTime'] = pd.to_datetime(grouped_30M['DateTime'])
+grouped['DateTime'] = pd.to_datetime(grouped['DateTime'])
 
 
-temp_analysis = temporalAnalysis()
-temp_analysis.plot_psd_timeseries(network_df)
+# plot
+plt.plot(grouped['DateTime'], grouped['total'], label='1s resolution', color='gray', linewidth='1')
+plt.plot(grouped_30M['DateTime'], grouped_30M['total'], label='averaged', color='green')
+plt.legend()
+plt.ylabel('cm$^{-3}$')
+plt.xlabel('Time (UTC)')
+plt.show()
+
+
+# data_groupings = dataGroupings()
+
+# group = {}
+# for site in sites:
+#     group[site] = data_groupings.bin_groupings(grouped_dict[site], grouping_option=2)
+
+
+# temp_analysis = temporalAnalysis()
+# temp_analysis.plot_psd_timeseries(network_df)
 
 # #### get second set of data
 # start_date='20220616'

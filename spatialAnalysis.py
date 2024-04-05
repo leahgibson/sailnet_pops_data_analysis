@@ -19,6 +19,7 @@ plt.rcParams.update({
     'xtick.labelsize': 10,         # Font size for x-axis ticks
     'ytick.labelsize': 10,         # Font size for y-axis ticks
     'legend.fontsize': 10,         # Font size for legend
+    'lines.linewidth': 2.5         # Set linewidth 
 })
 
 class timeseriesVisualization:
@@ -27,7 +28,11 @@ class timeseriesVisualization:
     """
 
     def __init__(self):
-        pass
+        
+        # colorblind friendly colors
+        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
 
     def plot_timeseries_together(self, dict_of_data, bin_name):
         """
@@ -42,19 +47,43 @@ class timeseriesVisualization:
         Returns: none
         """
 
-        
 
-        for site, df in dict_of_data.items():
+        # structure for getting overall max and min
+        overall_max = [0, 'site']
+        overall_min = [1000, 'site']
+
+
+        for idx, (site, df) in enumerate(dict_of_data.items()):
             df['DateTime'] = pd.to_datetime(df['DateTime'])
-            plt.plot(df['DateTime'], df[bin_name], linewidth=2,label=site)
-            
-        
-        
-        plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
+            plt.plot(df['DateTime'], df[bin_name], linewidth=2, color=self.colors[idx], label=site)
+
+            # get max and min
+            max = df[bin_name].max()
+            min = df[bin_name].min()
+
+            if max > overall_max[0]:
+                overall_max = [max, site]
+            if min < overall_min[0]:
+                overall_min = [min, site]
+
+        #plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
         plt.legend()
         plt.ylabel('cm$^{-3}$')
-        plt.title('PM1.0')
+        plt.title(bin_name)
         plt.show()
+
+        # return max and min values, which site, and when
+        max_site = overall_max[1]
+        max_index = dict_of_data[max_site][bin_name].idxmax()
+        max_date = dict_of_data[max_site].loc[max_index, 'DateTime']
+
+        min_site = overall_min[1]
+        min_index = dict_of_data[min_site][bin_name].idxmin()
+        min_date = dict_of_data[min_site].loc[min_index, 'DateTime']
+
+        print(f'The maximum concentration occurs at {max_site} on {max_date} wirh a concentration of {overall_max[0]}.')
+        print(f'The minimum concentration occurs at {min_site} on {min_date} with a concentration of {overall_min[0]}.')
+
     
     def plot_timeseries_one_by_one(self, dict_of_data, bin_name):
         """
@@ -133,10 +162,17 @@ class spatialVariability:
         self.years = [2021, 2022, 2023]
         self.months = [1,2,3,4,5,6,7,8,9,10,11,12]
 
+        # colorblind friendly colors
+        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
+
     def coefficient_of_variation(self, dict_of_data, bin_names, rolling=None, sum_headers=True):
         """
         Treats the site data at time t as a data set and computes the coefficient of variation.
         Plots the timeseries of these computations to see how CV changes over time.
+
+        First normalizes the data using min-xav scaling.
 
         Inputs:
         - dict_of_data: dictionary of site data
@@ -162,8 +198,6 @@ class spatialVariability:
             analysis_df['DateTime'] = df['DateTime']
             analysis_df = analysis_df.set_index('DateTime')
 
-            # compute cov
-            cov = analysis_df.std(axis=1)/analysis_df.mean(axis=1)
 
             # add to cv_df
             cv_df['cov'] = cov.to_frame(name='cov')
@@ -174,19 +208,33 @@ class spatialVariability:
             plt.ylabel('Coefficient of Variation')
             plt.show()
 
+        ### also normalizes data using min-max scaling ###
         else:
             for bin in bin_names:
                 analysis_df = pd.DataFrame()
                 sites = []
                 for site, df in dict_of_data.items():
                     sites.append(site)
-                    analysis_df[site] = df[bin]        
+                    analysis_df[site] = df[bin]
+
+
                 analysis_df['DateTime'] = df['DateTime']
                 analysis_df = analysis_df.set_index('DateTime')
 
+
+                # apply min_max scaling
+                site_mins = analysis_df.min(axis=1, skipna=True)
+                site_maxs = analysis_df.max(axis=1, skipna=True)
+
+                # scale rows (i.e. eaxh timestep) using (x-min)/(max-min)
+                scaled_data = (analysis_df.T - site_mins)/(site_maxs- site_mins)   
+                # transpose back
+                analysis_df = scaled_data.T
+
+
+
                 # compute cov
                 cov = analysis_df.std(axis=1)/analysis_df.mean(axis=1)
-                
 
                 # add to column in df
                 cv_df[bin] = cov.to_frame(name=bin)
@@ -197,24 +245,26 @@ class spatialVariability:
                 plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
                 plt.ylabel('Coefficient of Variation')
                 plt.legend()
-                plt.show()
+                #plt.show()
 
         if rolling is not None:
             rolling_cov = cv_df.rolling(window=rolling, min_periods=1).mean()
             print(rolling_cov)
             if sum_headers:
                 # compute n rolling mean
-                plt.plot(rolling_cov)
+                plt.plot(rolling_cov, color='orange')
                 plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
                 plt.ylabel('Coefficient of Variation')
                 plt.show()
             else:
                 for bin in bin_names:
-                    plt.plot(rolling_cov[bin], label=bin)
+                    plt.plot(rolling_cov[bin], color='orange', label='rolling mean')
                     plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
                     plt.ylabel('Coefficient of Variation')
                 plt.legend()
                 plt.show()
+        else:
+            plt.show()
 
 
 
@@ -281,10 +331,13 @@ class spatialVariability:
                 diffs = (data[names[0]] - data[names[1]]).abs()
                 avg = data[[names[0], names[1]]].mean(axis=1)
                 diff_df[key] = (diffs/avg)*100
-        
+
+
             
             # compute average of all columns for avg distance
             mean_diffs = diff_df.mean().tolist()
+
+            print('the differences:', mean_diffs)
 
             
             # plot
@@ -295,8 +348,8 @@ class spatialVariability:
             plt.plot(distances_list, mean_diffs, marker='o', markersize='26', linestyle='None', color='green')
             # do linear regressions
             slope, intercept, r_value, p_value, std_err = stats.linregress(distances_list, mean_diffs)
-            print('slope=',slope,'intercept=', intercept)
-            print('mean diffs=', mean_diffs)
+            #print('slope=',slope,'intercept=', intercept)
+            #print('mean diffs=', mean_diffs)
             regression_line = [slope*x + intercept for x in distances_list]
             plt.plot(distances_list, regression_line, color='black', linewidth=5)
             plt.title('r-value ' + str(round(r_value, 2)))
@@ -342,10 +395,13 @@ class spatialVariability:
                     diffs = (data[names[0]] - data[names[1]]).abs()
                     avg = data[[names[0], names[1]]].mean(axis=1)
                     diff_df[key] = (diffs/avg)*100
-            
                 
+                
+            
                 # compute average of all columns for avg distance
                 mean_diffs = diff_df.mean().tolist()
+
+                print('Differences:',mean_diffs)
 
                 
                 # plot
@@ -353,11 +409,11 @@ class spatialVariability:
                 #     plt.plot(distances_list, row, marker='o', linestyle='None', color='gray', alpha=0.5)
                     
                 # plot avg diffs
-                axs[i].plot(distances_list, mean_diffs, marker='o', markersize='10', linestyle='None', color=colors[i])
+                axs[i].plot(distances_list, mean_diffs, marker='o', markersize='10', linestyle='None', color=self.colors[i])
                 # do linear regressions
                 slope, intercept, r_value, p_value, std_err = stats.linregress(distances_list, mean_diffs)
-                print('slope=',slope,'intercept=', intercept)
-                print('mean diffs=', mean_diffs)
+                #print('slope=',slope,'intercept=', intercept)
+                #print('mean diffs=', mean_diffs)
                 regression_line = [slope*x + intercept for x in distances_list]
                 axs[i].plot(distances_list, regression_line, color='black', linewidth=5)
                 axs[i].set_title(bin + ' r=' + str(round(r_value, 2)))
@@ -426,6 +482,74 @@ class spatialVariability:
                 
         plt.show()
     
+    def compute_number_max_min_concentrations(self, dict_of_data, bin_name):
+        """
+        For the given bin, counts the number of times that each site experiences the maximum and minimum concentrations
+        of all of the sites.
+
+        Inputs:
+        - dict_of_data: dict of pops data
+        - bin_name: name of bin
+
+        Output: bar plot
+
+        Returns: none
+        """
+
+        # make df of only the data needed
+        analysis_df = pd.DataFrame()
+        sites = []
+        for site, df in dict_of_data.items():
+            sites.append(site)
+            analysis_df[site] = df[bin_name]        
+        analysis_df['DateTime'] = df['DateTime']
+        analysis_df = analysis_df.set_index('DateTime')
+
+        # initialize counters for max and min occurrences
+        max_count = {}
+        min_count = {}
+        for site in sites:
+            max_count[site] = 0
+            min_count[site] = 0
+        
+        # iterate over each time step
+        for time in analysis_df.index:
+            # find which site has the max and min conc
+            max_site = analysis_df.loc[time].idxmax()
+            min_site = analysis_df.loc[time].idxmin()
+
+
+            # incrment the counters
+            max_count[max_site] += 1
+            min_count[min_site] += 1
+        
+        print('The final counts are:')
+        print(f'Max count: {max_count}')
+        print(f'Min count: {min_count}')
+
+        # generate the bar chart
+        fig, ax = plt.subplots()
+        max_values = list(max_count.values())
+        min_values = list(min_count.values())
+
+        bar_width = 0.35
+        bar_positions_max = range(len(sites))
+        bar_positions_min = [pos + bar_width for pos in bar_positions_max]
+
+        ax.bar(bar_positions_max, max_values, bar_width, label='Maximum Concentration', color='red')
+        ax.bar(bar_positions_min, min_values, bar_width, label='Minimum Concentration', color='blue')
+
+        ax.set_xticks([pos + bar_width / 2 for pos in bar_positions_max])
+        ax.set_xticklabels(sites)
+        ax.set_ylabel('Frequency')
+        ax.legend()
+
+        plt.show()
+
+
+
+
+
     def _compute_horizontal_distance(self, sites):
         distances = {}
         # compute the difference between all sites
@@ -496,6 +620,10 @@ class networkDesign:
         """
         self.sites, self.datetimes, self.representation_dict = self._compute_representation_error(dict_of_data, bin_headers)
 
+        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
+
     def plot_representation_timeseries(self):
         """
         Plots a timeseries of the representation error for all sites in the data dict
@@ -510,8 +638,8 @@ class networkDesign:
         fig, axs = plt.subplots(len(self.representation_dict), sharey=True, sharex=True)
 
         for i, (bin, df) in enumerate(self.representation_dict.items()):
-            for site in self.sites:
-                axs[i].plot(self.datetimes, df[site], label=site)
+            for idx, site in enumerate(self.sites):
+                axs[i].plot(self.datetimes, df[site], color=self.colors[idx], label=site)
             # add label in subplot for the bin
             axs[i].text(0.02, 0.95, bin, transform=axs[i].transAxes, fontsize=24, va='top', ha='left')
         axs[i].legend()
@@ -542,10 +670,10 @@ class networkDesign:
             for j, site in enumerate(self.sites):
                 print(site)
                 # make line for range
-                axs[j].vlines(i+1, df[site].min(), df[site].max(), color=named_colors[i], linewidth=5, label=bin)
+                axs[j].vlines(i+1, df[site].min(), df[site].max(), color=self.colors[i], linewidth=5, label=bin)
                 print('range', abs(df[site].min() - df[site].max()))
                 # plot dot for average
-                axs[j].plot(i+1, df[site].mean(), color=named_colors[i], marker='o', markersize=10)
+                axs[j].plot(i+1, df[site].mean(), color=self.colors[i], marker='o', markersize=10)
                 print('mean', df[site].mean())
                 # don't show x-ticks
                 axs[j].set_xticks([])
@@ -586,10 +714,10 @@ class networkDesign:
         # compute rep error
         for bin, df in representation_dict.items():
             # compute avg column
-            df['average'] = df.mean(axis=1, skipna=False)
+            df['average'] = df.mean(axis=1, skipna=True) # change to False so do analysis when all sites have data 
             for site in sites:
                 df[site] = (df[site] - df['average'])/df['average']
         
-        print(sites)
+        
 
         return sites, datetimes, representation_dict

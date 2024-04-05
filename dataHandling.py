@@ -5,10 +5,24 @@ Used for the loading and reorganizing of POPS data.
 # load packages
 import os
 import calendar
+import math
 import numpy as np
 import pandas as pd
 import xarray as xr
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
+# Set the font size for different plot elements
+plt.rcParams.update({
+    'font.size': 24,               # Font size for general text
+    'axes.titlesize': 24,          # Font size for plot titles
+    'axes.labelsize': 18,          # Font size for axis labels
+    'xtick.labelsize': 18,         # Font size for x-axis ticks
+    'ytick.labelsize': 18,         # Font size for y-axis ticks
+    'legend.fontsize': 18,         # Font size for legend
+    'lines.linewidth': 2.5         # Set linewidth 
+})
 
 
 class dataRetrival:
@@ -278,6 +292,8 @@ class dataGroupings:
         Averages over all dfs in the dict to get a network mean, equal to the average of the sites at time t.
         
         Note that this function only accepts 16 bins, and other rebinning/grouping should be done AFTER.
+
+        All dfs must be same length.
         
         Inputs:
         - dict_of_data: dictionary of data in 16 bin structure
@@ -309,6 +325,106 @@ class dataGroupings:
         network_mean_df['total'] = network_mean_df[bins].sum(axis=1)
 
         return network_mean_df
+
+
+class dataCompletenessVisualization:
+    """
+    Class for plotting the completeness of data from the various sites.
+    """
+
+    def __init__(self):
+        pass
+
+    def plot_total_completeness(self, dict_of_data, bin_name):
+        """
+        Given dict of data and column headers, plots bars epresenting where data is and isn't present. 
+        Also provides the % of total data recorded (data points that are not na / total possible data points)
+
+        Inputs:
+        - dict_of_data: a dict of the total POPS data
+
+        Returns:
+        - plot
+        """
+
+        # dict of start and end dates for SAIL
+        date_info = {
+            'cbtop': ['20220613', '20230722'],
+            'cbmid': ['20211029', '20230603'],
+            'irwin': ['20211001', '20230722'],
+            'gothic': ['20211029', '20230722'],
+            'pumphouse': ['20211029', '20230722'],
+            'snodgrass':['20211001', '20230722']
+        }
+
+
+        # convert data to binary: 1 if value non nan, 0 otherwise
+        binary_lists = []
+        data_completeness = {}
+        site_list = []
+
+
+        for site, df in dict_of_data.items():
+            df['DateTime'] = pd.to_datetime(df['DateTime'])
+
+            # compute binary values in df
+            df['Binary'] = df[bin_name].notna().astype(int)
+
+            # Convert start_date and end_date to datetime objects
+            start_date = pd.to_datetime(date_info[site][0], format='%Y%m%d')
+            end_date = pd.to_datetime(date_info[site][1], format='%Y%m%d')
+
+            # Create a mask to select values outside of the date range
+            mask = ~((df['DateTime'] >= start_date) & (df['DateTime'] <= end_date))
+
+            # Assign NaN to values outside of the date range
+            df.loc[mask, 'Binary'] = np.nan
+
+            # compute list of binary data
+            binary_list = df['Binary'].tolist()
+
+
+            # compute the percent of data present
+            count_ones = binary_list.count(1)
+            total = np.count_nonzero(~np.isnan(binary_list))
+
+            try:
+                completeness_percent = (count_ones / total) * 100
+            except:
+                completeness_percent = np.nan
+            
+
+            # add data to dicts
+            binary_lists.append(binary_list)
+            data_completeness[site] = completeness_percent
+
+            # append site list with name
+            site_list.append(site)
+        
+        times = df['DateTime'].tolist()
+
+        # plot data
+
+        # make own colormap
+        cmap = plt.cm.colors.ListedColormap(['#999999', '#dede00'])
+        plt.pcolormesh(times, site_list, binary_lists, cmap=cmap, alpha=0.7)
+
+        for i in range(len(site_list)):
+            plt.axhline(i + 0.5, color='black', linewidth=1)
+
+        # add legend
+        plt.legend(handles=[plt.Rectangle((0, 0), 1, 1, color='#999999', label='nan'),
+                    plt.Rectangle((0, 0), 1, 1, color='#dede00', label='valid data')],
+           loc='upper left')
+        
+
+        plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
+        plt.show()
+
+        print(data_completeness)
+
+        
+
 
 
 

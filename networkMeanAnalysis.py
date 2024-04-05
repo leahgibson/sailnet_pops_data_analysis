@@ -20,6 +20,7 @@ plt.rcParams.update({
     'xtick.labelsize': 18,         # Font size for x-axis ticks
     'ytick.labelsize': 18,         # Font size for y-axis ticks
     'legend.fontsize': 18,         # Font size for legend
+    'lines.linewidth': 2.5         # Set linewidth 
 })
 
 class basicVisualization:
@@ -39,6 +40,7 @@ class basicVisualization:
         #   0.137674163, 0.078941363, 0.09085512, 0.177187651, 0.137678593, 0.096164793, 0.112758467,
         #   0.107949615, 0.10986499]
         
+        # CORRECTED USING UPDATED NOAA MIE TABLE
         self.dlogdp = [0.03645458169, 0.03940255269, 0.04033092159, 0.03849895488,
                     0.03655010672, 0.04559350564, 0.08261548653, 0.141566381,
                     0.080507337, 0.1008071129, 0.1428650493, 0.1559862,
@@ -51,6 +53,11 @@ class basicVisualization:
         
         self.diameter_midpoints = [149, 163, 178, 195, 213, 234, 272, 355, 455, 562, 749,
                             1059, 1431, 1870, 2440, 3062]
+        
+        # colorblind friendly colors
+        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
 
     def plot_network_timeseries(self, df, bin_name, rolling=None):
         """
@@ -63,7 +70,7 @@ class basicVisualization:
 
         Output: plot
 
-        Returns: None
+        Returns: none
         """
 
 
@@ -99,7 +106,7 @@ class basicVisualization:
         year_groups = data.groupby('Year')
 
         fig, ax = plt.subplots()
-        for group in year_groups:
+        for idx, group in enumerate(year_groups):
             df = group[1]
             # replace all years with 2023
             df['DateTime'] = df['DateTime'].apply(lambda x: x.replace(year=2023))
@@ -107,8 +114,9 @@ class basicVisualization:
             #df['DateTime'] = pd.to_datetime(df['DateTime'].dt.strftime('%m-%d %H:%M:%S'))
             
 
-            ax.plot(group[1]['DateTime'], group[1][bin_name], label=str(group[0]))
+            ax.plot(group[1]['DateTime'], group[1][bin_name], linewidth=2, color=self.colors[idx], label=str(group[0]))
         plt.legend()
+
         custom_ticks = [
         (datetime(2023, 1, 1, 0, 0, 0), "Jan"),
         (datetime(2023, 2, 1, 0, 0, 0), "Feb"),
@@ -269,22 +277,71 @@ class temporalAnalysis:
         
         self.diameter_midpoints = [149, 163, 178, 195, 213, 234, 272, 355, 455, 562, 749,
                             1059, 1431, 1870, 2440, 3062]
-
         
+        # colorblind friendly colors
+        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
+
+
+    def basic_stats(self, data, bin_name):
+        """
+        Returns basic stats of the nework mean data for the given bin.
+        
+        Inputs:
+        - data: df of network mean data
+        - bin_name: name of bin header
+        
+        Prints:
+        - maximum concentration and the day it occurs
+        - minimum concentration and the day it occurs
+        - average concentration 
+        - average absolute percent change between timesteps
+        """
+
+        # max concentration data
+        max_conc = data[bin_name].max()
+        max_index = data[bin_name].idxmax()
+        max_date = data.loc[max_index, 'DateTime']
+
+        # min concentration data
+        min_conc = data[bin_name].min()
+        min_index = data[bin_name].idxmin()
+        min_date = data.loc[min_index, 'DateTime']
+
+        # average concentration
+        avg_conc = np.mean(data[bin_name])
+        # absolute percent change between time steps
+        abs_percent_change = data[bin_name].pct_change().abs() # abs percent change = (|conc_{t+1} - conc_t|/conc_t)
+        # compute average
+        avg_change = (np.nanmean(abs_percent_change)*100)
+
+        # # plot this data
+        # plt.plot(abs_percent_change)
+        # plt.title('Absolute Percent Change')
+        # plt.show()
+
+        print('BASIC STATISTICS') 
+        print(f'Maximum Concentration: {max_conc} Occured on: {max_date}')
+        print(f'Minimum Concentration: {min_conc} Occured on {min_date}')
+        print(f'The average concentration is {avg_conc}')
+        print(f'The average percent change between time steps is {avg_change}')
+     
+    
 
     def plot_monthly_diurnal(self, data, bin_names):
         """
         Plots the average diurnal cycle for each month of 2022 by 
-        averaging over each dat in the month.
+        averaging over each day in the month.
 
         Note: there must be more than one month present for plot to work.
         
         Inputs:
-        - data: df of network mean
+        - data: df of network mean, should be binned hourly
         - bin_name: list of name of bins to analyze
             if data is cov data, use bin_name='' #### FILL THIS IN ###
         
-        Outputs: plot
+        Outputs: plot, range and percent change of diurnal pattern for each month
         
         Returns: none
         """
@@ -307,17 +364,29 @@ class temporalAnalysis:
         
 
         fig, axs = plt.subplots(nrows=1, ncols=num_months, sharex=True, sharey=True)
-        colors=['blue', 'orange', 'green']
+        #colors=['blue', 'orange', 'green']
+        ranges = {}
+        percent_changes = {}
         for bin in bin_names:
             idx = 0
             for year in self.years:
                 
                 for month in self.months:
                     try:
-                        axs[month-1].plot(daily_averages[bin][year][month].values, label=bin, color=colors[idx])
+                        axs[month-1].plot(daily_averages[bin][year][month].values, label=bin, color=self.colors[idx])
                         axs[month-1].set_title(str(year)+'-'+str(month))
                         axs[month-1].set_xticks([0, 11, 23])
                         axs[month-1].set_xticklabels(['00:00', '12:00', '24:00'])
+
+                        # compute the range for each month
+                        max = np.nanmax(daily_averages[bin][year][month].values)
+                        min = np.nanmin(daily_averages[bin][year][month].values)
+                        range = max - min
+                        percent_change = ((max-min)/min)*100
+
+                        ranges[f'{bin}_{year}_{month}'] = range
+                        percent_changes[f'{bin}_{year}_{month}'] = percent_change
+                        
                         
                     except:
                         pass
@@ -337,6 +406,9 @@ class temporalAnalysis:
         
                 
         plt.show()
+
+        # print(f'The ranges of each cycle are {ranges}')
+        # print(f'The percent changes of each cycle are {percent_changes}')
 
     
     def plot_monthly_psd(self, data):
@@ -412,13 +484,13 @@ class temporalAnalysis:
         
          # plot the particle dize distributions
         fig, axs = plt.subplots(nrows=1, ncols=12, sharex=True, sharey=True)
-        year_colors = ['blue', 'orange', 'green']
+        #year_colors = ['blue', 'orange', 'green']
         idx=0
         for year in self.years:
             i=0
             for month in self.months:
                 try:
-                    axs[month-1].loglog(self.diameter_midpoints, psd_dict[str(year)][str(month)], color=year_colors[idx], label=str(year))
+                    axs[month-1].loglog(self.diameter_midpoints, psd_dict[str(year)][str(month)], color=self.colors[idx], label=str(year))
                     axs[month-1].set_title(month_names[(month)-1])
 
                     i+=1
@@ -441,21 +513,21 @@ class temporalAnalysis:
         
         plt.show()
 
-        # normalized psd plot
-        fig, axs = plt.subplots(nrows=1, ncols=num_months, sharex=True, sharey=True)
-        i=0
-        for month in self.months:
-            try:
-                axs[i].loglog(self.diameter_midpoints, normalized_psd[str(month)])
-                axs[i].set_title('2022'+'-'+str(month))
+        # # normalized psd plot
+        # fig, axs = plt.subplots(nrows=1, ncols=num_months, sharex=True, sharey=True)
+        # i=0
+        # for month in self.months:
+        #     try:
+        #         axs[i].loglog(self.diameter_midpoints, normalized_psd[str(month)])
+        #         axs[i].set_title('2022'+'-'+str(month))
 
-                i+=1
-            except:
-                pass
-        axs[0].set_ylabel('normalized dn/dlogdp')
-        axs[int(np.round(num_months/2))].set_xlabel('Diameter (nm)')
+        #         i+=1
+        #     except:
+        #         pass
+        # axs[0].set_ylabel('normalized dn/dlogdp')
+        # axs[int(np.round(num_months/2))].set_xlabel('Diameter (nm)')
 
-        plt.show()
+        # plt.show()
 
     def plot_psd_timeseries(self, data):
         """
@@ -471,6 +543,9 @@ class temporalAnalysis:
         Output: colormap plot
         """
 
+        # Replace values equal to 0 with NaN
+        data.replace(0, np.nan, inplace=True) 
+
         # compute dn/dlogdp lavlues and reformat for plotting
         dndlogdp_matrix = []
         # rehape to [[bin0time0, bin0time1, ...',
@@ -478,7 +553,7 @@ class temporalAnalysis:
         for i, bin in enumerate(self.standard_bins):
             # compute dn/dlogdp for each bin
             row = np.array((data[bin]/self.dlogdp[i]).tolist())
-            # remove values that are too small
+            # remove values that are too small    
             dndlogdp_matrix.append(row)
         
         dndlogdp_matrix = np.array(dndlogdp_matrix)
@@ -490,7 +565,7 @@ class temporalAnalysis:
 
         # plot contour plot with log-y axis
         contour_levels = np.logspace(np.log10(np.nanmin(dndlogdp_matrix)), np.log10(np.nanmax(dndlogdp_matrix)), 500)
-        plt.contourf(times, diameters, dndlogdp_matrix, norm=colors.LogNorm(), levels=contour_levels, cmap='jet')
+        plt.contourf(times, diameters, dndlogdp_matrix, norm=colors.LogNorm(), levels=contour_levels, cmap='inferno')
         plt.yscale('log')
 
         # make sure colorbar shows
