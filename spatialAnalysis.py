@@ -13,12 +13,12 @@ from scipy import stats
 
 # Set the font size for different plot elements
 plt.rcParams.update({
-    'font.size': 10,               # Font size for general text
+    'font.size': 8,               # Font size for general text
     'axes.titlesize': 10,          # Font size for plot titles
-    'axes.labelsize': 10,          # Font size for axis labels
-    'xtick.labelsize': 10,         # Font size for x-axis ticks
-    'ytick.labelsize': 10,         # Font size for y-axis ticks
-    'legend.fontsize': 10,         # Font size for legend
+    'axes.labelsize': 8,          # Font size for axis labels
+    'xtick.labelsize': 8,         # Font size for x-axis ticks
+    'ytick.labelsize': 8,         # Font size for y-axis ticks
+    'legend.fontsize': 8,         # Font size for legend
     'lines.linewidth': 2.5         # Set linewidth 
 })
 
@@ -30,9 +30,11 @@ class timeseriesVisualization:
     def __init__(self):
         
         # colorblind friendly colors
-        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
-                  '#f781bf', '#a65628', '#984ea3',
-                  '#999999', '#e41a1c', '#dede00']
+        # self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+        #           '#f781bf', '#a65628', '#984ea3',
+        #           '#999999', '#e41a1c', '#dede00']
+        
+        self.colors = plt.cm.viridis(np.linspace(0, 1, 6))
 
     def plot_timeseries_together(self, dict_of_data, bin_name):
         """
@@ -53,9 +55,10 @@ class timeseriesVisualization:
         overall_min = [1000, 'site']
 
 
+        fig, ax = plt.subplots(figsize=(6.6,4), dpi=300)
         for idx, (site, df) in enumerate(dict_of_data.items()):
             df['DateTime'] = pd.to_datetime(df['DateTime'])
-            plt.plot(df['DateTime'], df[bin_name], linewidth=2, color=self.colors[idx], label=site)
+            ax.plot(df['DateTime'], df[bin_name], linewidth=1.5, color=self.colors[idx], label=site)
 
             # get max and min
             max = df[bin_name].max()
@@ -66,10 +69,12 @@ class timeseriesVisualization:
             if min < overall_min[0]:
                 overall_min = [min, site]
 
-        #plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
-        plt.legend()
-        plt.ylabel('cm$^{-3}$')
-        plt.title(bin_name)
+        
+        ax.legend()
+        ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5))
+        ax.set_xlabel('UTC')
+        ax.set_ylabel('cm$^{-3}$')
+        ax.set_title(bin_name)
         plt.show()
 
         # return max and min values, which site, and when
@@ -163,9 +168,11 @@ class spatialVariability:
         self.months = [1,2,3,4,5,6,7,8,9,10,11,12]
 
         # colorblind friendly colors
-        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
-                  '#f781bf', '#a65628', '#984ea3',
-                  '#999999', '#e41a1c', '#dede00']
+        # self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+        #           '#f781bf', '#a65628', '#984ea3',
+        #           '#999999', '#e41a1c', '#dede00']
+
+        self.colors = plt.cm.viridis(np.linspace(0, 1, 6))
 
     def coefficient_of_variation(self, dict_of_data, bin_names, rolling=None, sum_headers=True):
         """
@@ -240,11 +247,14 @@ class spatialVariability:
                 cv_df[bin] = cov.to_frame(name=bin)
 
                 # plot
-                plt.plot(cov, label=bin)
+                fig, ax = plt.subplots(figsize=(6.6,3), dpi=300)
+                ax.plot(cov, linewidth=1.5, label=bin)
             
-                plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
-                plt.ylabel('Coefficient of Variation')
-                plt.legend()
+                # Set x-axis major tick locator
+                ax.set_xlabel('UTC')
+                ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5))
+                ax.set_ylabel('Coefficient of Variation')
+                ax.legend()
                 #plt.show()
 
         if rolling is not None:
@@ -252,15 +262,15 @@ class spatialVariability:
             print(rolling_cov)
             if sum_headers:
                 # compute n rolling mean
-                plt.plot(rolling_cov, color='orange')
-                plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
-                plt.ylabel('Coefficient of Variation')
+                ax.plot(rolling_cov, linewidth=1.5, color='orange')
+                #plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
+                #plt.ylabel('Coefficient of Variation')
                 plt.show()
             else:
                 for bin in bin_names:
-                    plt.plot(rolling_cov[bin], color='orange', label='rolling mean')
-                    plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
-                    plt.ylabel('Coefficient of Variation')
+                    ax.plot(rolling_cov[bin], linewidth=1.5, color='orange', label='rolling mean')
+                    #plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
+                    #plt.ylabel('Coefficient of Variation')
                 plt.legend()
                 plt.show()
         else:
@@ -274,6 +284,51 @@ class spatialVariability:
         
     
         return cv_df
+
+    def plot_maximum_range(self, dict_of_data, bin_name, window=None):
+        """
+        Given data dict and the desired header, plots the range within the data for each time step.
+        
+        Inputs:
+        - dict_of_data: dict of SAIL data
+        - header: string of the header to use
+        - window: int or None
+
+        Returns: plot
+        """
+
+        analysis_df = pd.DataFrame()
+        sites = []
+        for site, df in dict_of_data.items():
+            sites.append(site)
+            analysis_df[site] = df[bin_name]
+
+
+        analysis_df['DateTime'] = df['DateTime']
+        analysis_df = analysis_df.set_index('DateTime')
+
+        # compute the range of each row
+        ranges = analysis_df.apply(self._row_range, axis=1)
+
+        print(ranges)
+
+        plt.plot(ranges, label='Range')
+        plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
+
+
+        if window is not None:
+            rolling_range = ranges.rolling(window=window, min_periods=1).mean()
+            plt.plot(rolling_range, label='Rolling Mean')
+            plt.legend()
+            plt.show()
+        else:
+            plt.ylabel('Ranges')
+            plt.show()
+
+
+
+    def _row_range(self, row):
+        return row.max() - row.min()
 
     def sudo_variogram(self, dict_of_data, bin_names, distance_type, sum_headers=True):
         """
@@ -359,7 +414,7 @@ class spatialVariability:
         
         else:
         
-            fig, axs = plt.subplots(ncols=len(bin_names), sharey=True)
+            fig, axs = plt.subplots(ncols=len(bin_names), sharey=True, figsize=(6.6,3), dpi=300)
             colors=['b', 'g', 'r']
             for i, bin in enumerate(bin_names):
                 # create single df
@@ -409,13 +464,13 @@ class spatialVariability:
                 #     plt.plot(distances_list, row, marker='o', linestyle='None', color='gray', alpha=0.5)
                     
                 # plot avg diffs
-                axs[i].plot(distances_list, mean_diffs, marker='o', markersize='10', linestyle='None', color=self.colors[i])
+                axs[i].plot(distances_list, mean_diffs, marker='o', markersize='5', linestyle='None', color=self.colors[i*2])
                 # do linear regressions
                 slope, intercept, r_value, p_value, std_err = stats.linregress(distances_list, mean_diffs)
                 #print('slope=',slope,'intercept=', intercept)
                 #print('mean diffs=', mean_diffs)
                 regression_line = [slope*x + intercept for x in distances_list]
-                axs[i].plot(distances_list, regression_line, color='black', linewidth=5)
+                axs[i].plot(distances_list, regression_line, color='black', linewidth=2)
                 axs[i].set_title(bin + ' r=' + str(round(r_value, 2)))
                 if i==np.floor(len(bin_names)/2):
                     axs[i].set_xlabel(distance_name)
@@ -620,9 +675,11 @@ class networkDesign:
         """
         self.sites, self.datetimes, self.representation_dict = self._compute_representation_error(dict_of_data, bin_headers)
 
-        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
-                  '#f781bf', '#a65628', '#984ea3',
-                  '#999999', '#e41a1c', '#dede00']
+        # self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+        #           '#f781bf', '#a65628', '#984ea3',
+        #           '#999999', '#e41a1c', '#dede00']
+
+        self.colors = plt.cm.viridis(np.linspace(0, 1, 6))
 
     def plot_representation_timeseries(self):
         """
@@ -635,15 +692,17 @@ class networkDesign:
         """
 
         # plot representation error timeseries
-        fig, axs = plt.subplots(len(self.representation_dict), sharey=True, sharex=True)
+        fig, axs = plt.subplots(len(self.representation_dict), sharey=True, sharex=True, figsize=(6.6,4), dpi=300)
 
         for i, (bin, df) in enumerate(self.representation_dict.items()):
             for idx, site in enumerate(self.sites):
-                axs[i].plot(self.datetimes, df[site], color=self.colors[idx], label=site)
+                axs[i].plot(self.datetimes, df[site], linewidth=1.5, color=self.colors[idx], label=site)
             # add label in subplot for the bin
-            axs[i].text(0.02, 0.95, bin, transform=axs[i].transAxes, fontsize=24, va='top', ha='left')
-        axs[i].legend()
-        plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
+            axs[i].text(0.02, 0.95, bin, transform=axs[i].transAxes, fontsize=10, va='top', ha='left')
+        axs[0].legend(loc='upper right', ncol=3)
+        axs[i].xaxis.set_major_locator(ticker.MaxNLocator(nbins=5))
+        axs[-1].set_xlabel('UTC')
+        axs[1].set_ylabel('Representation Error')
         plt.show()
 
     def plot_representation_bars(self):
@@ -659,21 +718,23 @@ class networkDesign:
         """
 
         # compute average and range of representation errors for plotting
-        fig, axs = plt.subplots(ncols=len(self.sites), sharey=True)
+        fig, axs = plt.subplots(ncols=len(self.sites), sharey=True, figsize=(6.6,2.5), dpi=300)
 
         named_colors = ['blue', 'green', 'red', 'black', 'magenta',
                             'yellow', 'cyan', 'gray', 'orange',
                             'purple', 'pink', 'brown']
+        
+        
 
         for i, (bin, df) in enumerate(self.representation_dict.items()):
             print(bin)
             for j, site in enumerate(self.sites):
                 print(site)
                 # make line for range
-                axs[j].vlines(i+1, df[site].min(), df[site].max(), color=self.colors[i], linewidth=5, label=bin)
+                axs[j].vlines(i+1, df[site].min(), df[site].max(), color=self.colors[i*2], linewidth=1.5, label=bin)
                 print('range', abs(df[site].min() - df[site].max()))
                 # plot dot for average
-                axs[j].plot(i+1, df[site].mean(), color=self.colors[i], marker='o', markersize=10)
+                axs[j].plot(i+1, df[site].mean(), color=self.colors[i*2], marker='^', markersize=3)
                 print('mean', df[site].mean())
                 # don't show x-ticks
                 axs[j].set_xticks([])

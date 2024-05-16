@@ -14,12 +14,12 @@ from scipy.stats import gaussian_kde
 
 # Set the font size for different plot elements
 plt.rcParams.update({
-    'font.size': 24,               # Font size for general text
-    'axes.titlesize': 24,          # Font size for plot titles
-    'axes.labelsize': 18,          # Font size for axis labels
-    'xtick.labelsize': 18,         # Font size for x-axis ticks
-    'ytick.labelsize': 18,         # Font size for y-axis ticks
-    'legend.fontsize': 18,         # Font size for legend
+    'font.size': 8,               # Font size for general text
+    'axes.titlesize': 8,          # Font size for plot titles
+    'axes.labelsize': 8,          # Font size for axis labels
+    'xtick.labelsize': 8,         # Font size for x-axis ticks
+    'ytick.labelsize': 8,         # Font size for y-axis ticks
+    'legend.fontsize': 8,         # Font size for legend
     'lines.linewidth': 2.5         # Set linewidth 
 })
 
@@ -55,9 +55,11 @@ class basicVisualization:
                             1059, 1431, 1870, 2440, 3062]
         
         # colorblind friendly colors
-        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
-                  '#f781bf', '#a65628', '#984ea3',
-                  '#999999', '#e41a1c', '#dede00']
+        # self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+        #           '#f781bf', '#a65628', '#984ea3',
+        #           '#999999', '#e41a1c', '#dede00']
+
+        self.colors = plt.cm.viridis(np.linspace(0, 1, 6))
 
     def plot_network_timeseries(self, df, bin_name, rolling=None):
         """
@@ -105,7 +107,7 @@ class basicVisualization:
 
         year_groups = data.groupby('Year')
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(6.6,3.5), dpi=300)
         for idx, group in enumerate(year_groups):
             df = group[1]
             # replace all years with 2023
@@ -114,7 +116,7 @@ class basicVisualization:
             #df['DateTime'] = pd.to_datetime(df['DateTime'].dt.strftime('%m-%d %H:%M:%S'))
             
 
-            ax.plot(group[1]['DateTime'], group[1][bin_name], linewidth=2, color=self.colors[idx], label=str(group[0]))
+            ax.plot(group[1]['DateTime'], group[1][bin_name], linewidth=1.5, color=self.colors[idx*2], label=str(group[0]))
         plt.legend()
 
         custom_ticks = [
@@ -135,6 +137,7 @@ class basicVisualization:
         ax.set_xticklabels([tick[1] for tick in custom_ticks])
         ax.set_title(bin_name)
         ax.set_ylabel('cm$^{-3}$')
+        ax.set_xlabel('UTC')
         plt.show()
 
     def plot_psd(self, data, data2=None, data3=None):
@@ -279,9 +282,11 @@ class temporalAnalysis:
                             1059, 1431, 1870, 2440, 3062]
         
         # colorblind friendly colors
-        self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
-                  '#f781bf', '#a65628', '#984ea3',
-                  '#999999', '#e41a1c', '#dede00']
+        # self.colors = ['#377eb8', '#ff7f00', '#4daf4a',
+        #           '#f781bf', '#a65628', '#984ea3',
+        #           '#999999', '#e41a1c', '#dede00']
+
+        self.colors = plt.cm.viridis(np.linspace(0, 1, 6))
 
 
     def basic_stats(self, data, bin_name):
@@ -331,7 +336,7 @@ class temporalAnalysis:
 
     def plot_monthly_diurnal(self, data, bin_names):
         """
-        Plots the average diurnal cycle for each month of 2022 by 
+        Plots the average diurnal cycle for each month
         averaging over each day in the month.
 
         Note: there must be more than one month present for plot to work.
@@ -345,6 +350,21 @@ class temporalAnalysis:
         
         Returns: none
         """
+
+        month_dict = {
+            1: 'Jan',
+            2: 'Feb',
+            3: 'March',
+            4: 'April',
+            5: 'May',
+            6: 'June',
+            7: 'July',
+            8: 'Aug',
+            9: 'Sept',
+            10: 'Oct',
+            11: 'Nov',
+            12: 'Dec'
+        }
 
         # make groups into months 
         data['DateTime'] = pd.to_datetime(data['DateTime'])
@@ -363,7 +383,7 @@ class temporalAnalysis:
             daily_averages[bin] = data.groupby(['Year', 'Month', 'Time'])[bin].mean()
         
 
-        fig, axs = plt.subplots(nrows=1, ncols=num_months, sharex=True, sharey=True)
+        fig, axs = plt.subplots(nrows=1, ncols=num_months, sharex=True, sharey=True, figsize=(6.6,2.5), dpi=300)
         #colors=['blue', 'orange', 'green']
         ranges = {}
         percent_changes = {}
@@ -373,10 +393,10 @@ class temporalAnalysis:
                 
                 for month in self.months:
                     try:
-                        axs[month-1].plot(daily_averages[bin][year][month].values, label=bin, color=self.colors[idx])
-                        axs[month-1].set_title(str(year)+'-'+str(month))
-                        axs[month-1].set_xticks([0, 11, 23])
-                        axs[month-1].set_xticklabels(['00:00', '12:00', '24:00'])
+                        axs[month-1].plot(daily_averages[bin][year][month].values, linewidth=1.5, label=bin, color=self.colors[idx*2])
+                        axs[month-1].set_title(month_dict[month])
+                        axs[month-1].set_xticks([0, 12, 23])
+                        axs[month-1].set_xticklabels(['0', '12', '23'])
 
                         # compute the range for each month
                         max = np.nanmax(daily_averages[bin][year][month].values)
@@ -392,16 +412,17 @@ class temporalAnalysis:
                         pass
                 idx+=1
         axs[0].set_ylabel('cm$^{-3}$')
+        axs[5].set_xlabel('UTC')
         
         # Create custom handles and labels for the legend
-        legend_handles = [Line2D([0], [0], color='blue', lw=2),
-                        Line2D([0], [0], color='orange', lw=2),
-                        Line2D([0], [0], color='green', lw=2)]
+        legend_handles = [Line2D([0], [0], color=self.colors[0], lw=2),
+                        Line2D([0], [0], color=self.colors[2], lw=2),
+                        Line2D([0], [0], color=self.colors[4], lw=2)]
 
         legend_labels = ['2021', '2022', '2023']
 
         # Create a legend with custom handles and labels
-        axs[0].legend(handles=legend_handles, labels=legend_labels, loc='upper right')
+        axs[-1].legend(handles=legend_handles, labels=legend_labels, loc='upper right')
 
         
                 
@@ -483,14 +504,14 @@ class temporalAnalysis:
         month_names = ['Jan', 'Feb', 'March', 'April', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
         
          # plot the particle dize distributions
-        fig, axs = plt.subplots(nrows=1, ncols=12, sharex=True, sharey=True)
+        fig, axs = plt.subplots(nrows=1, ncols=12, sharex=True, sharey=True, figsize=(6.6,2.5), dpi=300)
         #year_colors = ['blue', 'orange', 'green']
         idx=0
         for year in self.years:
             i=0
             for month in self.months:
                 try:
-                    axs[month-1].loglog(self.diameter_midpoints, psd_dict[str(year)][str(month)], color=self.colors[idx], label=str(year))
+                    axs[month-1].loglog(self.diameter_midpoints, psd_dict[str(year)][str(month)], linewidth=1.5, color=self.colors[idx*2], label=str(year))
                     axs[month-1].set_title(month_names[(month)-1])
 
                     i+=1
@@ -499,14 +520,14 @@ class temporalAnalysis:
             idx+=1
         axs[0].set_ylabel('cm$^{-3}$')#('dn/dlogdp')
         # Create custom handles and labels for the legend
-        legend_handles = [Line2D([0], [0], color='blue', lw=2),
-                        Line2D([0], [0], color='orange', lw=2),
-                        Line2D([0], [0], color='green', lw=2)]
+        legend_handles = [Line2D([0], [0], color=self.colors[0], lw=2),
+                        Line2D([0], [0], color=self.colors[2], lw=2),
+                        Line2D([0], [0], color=self.colors[4], lw=2)]
 
         legend_labels = ['2021', '2022', '2023']
 
         # Create a legend with custom handles and labels
-        axs[0].legend(handles=legend_handles, labels=legend_labels, loc='upper right')
+        axs[-1].legend(handles=legend_handles, labels=legend_labels, loc='upper right')
 
         axs[int(np.round(num_months/2))].set_xlabel('Diameter (nm)')
 
@@ -564,12 +585,13 @@ class temporalAnalysis:
         #times, diameters = np.meshgrid(data['DateTime'].tolist(), diameters)
 
         # plot contour plot with log-y axis
+        fig, ax = plt.subplots(figsize=(6.6,3), dpi=300)
         contour_levels = np.logspace(np.log10(np.nanmin(dndlogdp_matrix)), np.log10(np.nanmax(dndlogdp_matrix)), 500)
-        plt.contourf(times, diameters, dndlogdp_matrix, norm=colors.LogNorm(), levels=contour_levels, cmap='inferno')
-        plt.yscale('log')
+        contour = ax.contourf(times, diameters, dndlogdp_matrix, norm=colors.LogNorm(), levels=contour_levels, cmap='inferno')
+        ax.set_yscale('log')
 
         # make sure colorbar shows
-        cbar = plt.colorbar()
+        cbar = fig.colorbar(contour)
 
         # make cbar labels
         cbar_ticks = np.logspace(np.ceil(np.log10(np.nanmin(dndlogdp_matrix))), np.floor(np.log10(np.nanmax(dndlogdp_matrix))), 6)
@@ -577,13 +599,13 @@ class temporalAnalysis:
         cbar.set_ticklabels(['$10^{{{}}}$'.format(int(np.log10(tick))) for tick in cbar_ticks])
 
         # make label for colorbar
-        cbar.ax.set_ylabel('dN/dlogD$_p$')
+        cbar.set_label('dN/dlogD$_p$')
 
         # y-axis label
-        plt.ylabel('D$_p$ (nm)')
+        ax.set_ylabel('D$_p$ (nm)')
+        ax.set_xlabel('UTC')
 
-        plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
-
+        ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=5))
 
         plt.show()
  

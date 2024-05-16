@@ -13,19 +13,9 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-# Set the font size for different plot elements
-plt.rcParams.update({
-    'font.size': 24,               # Font size for general text
-    'axes.titlesize': 24,          # Font size for plot titles
-    'axes.labelsize': 18,          # Font size for axis labels
-    'xtick.labelsize': 18,         # Font size for x-axis ticks
-    'ytick.labelsize': 18,         # Font size for y-axis ticks
-    'legend.fontsize': 18,         # Font size for legend
-    'lines.linewidth': 2.5         # Set linewidth 
-})
 
 
-class dataRetrival:
+class POPSDataRetrival:
     """
     This class is used to load and concatenate the POPS dataset for the desired time period.
     """
@@ -406,19 +396,21 @@ class dataCompletenessVisualization:
         # plot data
 
         # make own colormap
+        fig, ax = plt.subplots(figsize=(6.6,2.5), dpi=300)
         cmap = plt.cm.colors.ListedColormap(['#999999', '#dede00'])
-        plt.pcolormesh(times, site_list, binary_lists, cmap=cmap, alpha=0.7)
+        mesh = ax.pcolormesh(times, site_list, binary_lists, cmap=cmap, alpha=0.7)
 
         for i in range(len(site_list)):
-            plt.axhline(i + 0.5, color='black', linewidth=1)
+            ax.axhline(i + 0.5, color='black', linewidth=1)
 
         # add legend
-        plt.legend(handles=[plt.Rectangle((0, 0), 1, 1, color='#999999', label='nan'),
+        legend = ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color='#999999', label='nan'),
                     plt.Rectangle((0, 0), 1, 1, color='#dede00', label='valid data')],
-           loc='upper left')
+           loc='upper left', fontsize=8, ncols=2)
         
-
-        plt.gca().xaxis.set_major_locator(ticker.AutoLocator())
+        ax.set_xlabel('UTC')
+        ax.tick_params(axis= 'both', which='major', labelsize=8)
+        ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=6))
         plt.show()
 
         print(data_completeness)
