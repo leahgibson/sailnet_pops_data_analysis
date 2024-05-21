@@ -11,6 +11,7 @@ import matplotlib.ticker as ticker
 from matplotlib.lines import Line2D
 import matplotlib.colors as colors
 from scipy.stats import gaussian_kde
+import pytz
 
 # Set the font size for different plot elements
 plt.rcParams.update({
@@ -107,7 +108,7 @@ class basicVisualization:
 
         year_groups = data.groupby('Year')
 
-        fig, ax = plt.subplots(figsize=(6.6,3.5), dpi=300)
+        fig, ax = plt.subplots(figsize=(6.6,3), dpi=300)
         for idx, group in enumerate(year_groups):
             df = group[1]
             # replace all years with 2023
@@ -365,14 +366,23 @@ class temporalAnalysis:
             11: 'Nov',
             12: 'Dec'
         }
+        data = data.copy()
 
-        # make groups into months 
+        
         data['DateTime'] = pd.to_datetime(data['DateTime'])
 
+        # convert to Colorado time
+        colorado_tz = pytz.timezone('America/Denver')
+        data['DateTime'] = data['DateTime'].dt.tz_localize('UTC').dt.tz_convert(colorado_tz)
+
+
+        # group data
         data['Time'] = data['DateTime'].dt.time
         data['Month'] = data['DateTime'].dt.month
         data['Year'] = data['DateTime'].dt.year
         data['Day'] = data['DateTime'].dt.day
+
+        print(data)
 
         # number of months in data
         num_months = data['Month'].nunique()
@@ -381,6 +391,7 @@ class temporalAnalysis:
         daily_averages = {}
         for bin in bin_names:
             daily_averages[bin] = data.groupby(['Year', 'Month', 'Time'])[bin].mean()
+        
         
 
         fig, axs = plt.subplots(nrows=1, ncols=num_months, sharex=True, sharey=True, figsize=(6.6,2.5), dpi=300)
@@ -395,8 +406,8 @@ class temporalAnalysis:
                     try:
                         axs[month-1].plot(daily_averages[bin][year][month].values, linewidth=1.5, label=bin, color=self.colors[idx*2])
                         axs[month-1].set_title(month_dict[month])
-                        axs[month-1].set_xticks([0, 12, 23])
-                        axs[month-1].set_xticklabels(['0', '12', '23'])
+                        axs[month-1].set_xticks([6, 18])
+                        axs[month-1].set_xticklabels(['6', '18'])
 
                         # compute the range for each month
                         max = np.nanmax(daily_averages[bin][year][month].values)
@@ -412,7 +423,7 @@ class temporalAnalysis:
                         pass
                 idx+=1
         axs[0].set_ylabel('cm$^{-3}$')
-        axs[5].set_xlabel('UTC')
+        axs[int(np.round(num_months/2))].set_xlabel('Local Time')
         
         # Create custom handles and labels for the legend
         legend_handles = [Line2D([0], [0], color=self.colors[0], lw=2),
@@ -436,6 +447,8 @@ class temporalAnalysis:
         """
         Plots the average monthly psd and the average normalized psd for each month.
 
+        NOTE: data converted to local time for this analysis
+
         Note: only works for 16 bins and for 2022 year.
         
         Inputs:
@@ -445,11 +458,10 @@ class temporalAnalysis:
 
         Reutns: noone
         """
-
-        
         
         # make groups into months 
         data['DateTime'] = pd.to_datetime(data['DateTime'])
+
 
         data['Time'] = data['DateTime'].dt.time
         data['Month'] = data['DateTime'].dt.month

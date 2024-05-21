@@ -1,5 +1,7 @@
 """
-Code for analysis and plotting of comparison between SAIL-Net and TBS data
+Code for analysis and plotting of comparison between SAIL-Net and TBS data.
+
+Download TBS data from: https://adc.arm.gov/discovery/#/results/s::tbspops
 """
 
 # import packages

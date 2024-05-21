@@ -55,7 +55,7 @@ class timeseriesVisualization:
         overall_min = [1000, 'site']
 
 
-        fig, ax = plt.subplots(figsize=(6.6,4), dpi=300)
+        fig, ax = plt.subplots(figsize=(6.6,3), dpi=300)
         for idx, (site, df) in enumerate(dict_of_data.items()):
             df['DateTime'] = pd.to_datetime(df['DateTime'])
             ax.plot(df['DateTime'], df[bin_name], linewidth=1.5, color=self.colors[idx], label=site)

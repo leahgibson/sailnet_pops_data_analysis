@@ -7,7 +7,6 @@ Data are accessible on the ARM Data Discovery website:
 https://adc.arm.gov/discovery/#/results/iopShortName::amf2021SAILCAIVIMT/instrument_code::pops 
 """
 
-"""
 # import packages
 from dataHandling import POPSDataRetrival, dataGroupings, dataCompletenessVisualization
 from networkMeanAnalysis import basicVisualization, temporalAnalysis
@@ -71,8 +70,6 @@ network_analysis.basic_stats(data=bin_grouped_network_mean_1D, bin_name='dn_170_
 network_basic_vis = basicVisualization()
 network_basic_vis.plot_overlapping_timeseries(bin_grouped_network_mean_1D, bin_name='dn_170_3400')
 
-# FIGURE 6: daily diurnal cycle averaged monthly
-network_analysis.plot_monthly_diurnal(bin_grouped_network_mean_1H, bin_names=['dn_170_3400'])
 
 # FIGURE 7: average particle size distribution averaged monthly
 network_analysis.plot_monthly_psd(network_mean_1H)
@@ -102,10 +99,58 @@ network.plot_representation_timeseries()
 
 # FIGURE 13: rep error bars
 network.plot_representation_bars()
- 
-"""
 
-"""
+
+
+
+
+# FIGURE 6: diurnal cycles avg monthly without wildfire smoke in June 2022
+
+# set up date range and sites for analysis
+start_date = '20211010'
+end_date = '20230722'
+
+sites = ['pumphouse', 'gothic', 'cbmid', 'irwin', 'snodgrass', 'cbtop']
+
+# load data
+dr = POPSDataRetrival()
+remove_dates=['20220613', '20220614', '20220615']
+data_dict = dr.create_datasets(sites=sites, start_date=start_date, end_date=end_date, subsample=12, remove_dates=remove_dates)
+
+# time bin data
+grouping = dataGroupings()
+time_grouped_dict_1H = {}   # group data by hours # group data by 1 day intervals
+
+for site in sites:
+    time_grouped_dict_1H[site] = grouping.temporal_grouping(data_dict[site], averaging_frequency='1H')
+
+# group bins 
+bin_grouped_dict_1H = {}
+
+for site in sites:
+    bin_grouped_dict_1H[site] = grouping.bin_groupings(time_grouped_dict_1H[site], grouping_option=2)
+
+
+# compute network mean
+network_mean_1H = grouping.network_mean(time_grouped_dict_1H)
+
+# bin groupings of network mean
+bin_grouped_network_mean_1H = grouping.bin_groupings(network_mean_1H, grouping_option=2)
+
+# print network mean stats
+network_analysis = temporalAnalysis()
+
+
+# FIGURE 6: daily diurnal cycle averaged monthly
+network_analysis.plot_monthly_diurnal(bin_grouped_network_mean_1H, bin_names=['dn_170_3400'])
+ 
+
+
+
+
+
+
+
 
 # FIGURE 9: examples of variability
 
@@ -148,7 +193,8 @@ for site in sites:
 
 # first subplot
 for i, site in enumerate(sites):
-    axs[0].plot(data_5Min[site]['DateTime'], data_5Min[site]['dn_170_3400'], color=colors[2*i], label=site)
+    data = data_5Min[site]['dn_155_170'] + data_5Min[site]['dn_170_300']
+    axs[0].plot(data_5Min[site]['DateTime'], data, color=colors[2*i], label=site)
 axs[0].legend(loc='upper left', ncol=2)
 axs[0].set_ylabel('cm$^{-3}$')
 axs[0].xaxis.set_major_locator(ticker.MaxNLocator(nbins=4))
@@ -216,12 +262,8 @@ plt.show()
 
 
 
-"""
 
-
-
-
-# FIGURE 1
+# FIGURE 1: map of sites
 
 import matplotlib.pyplot as plt
 from pyproj import CRS, Transformer
@@ -279,3 +321,4 @@ scalebar = ScaleBar(1, location='upper left', scale_loc='top')
 ax.add_artist(scalebar)
 plt.tight_layout()
 plt.show()
+
