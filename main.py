@@ -2,8 +2,7 @@
 Main file for the analysis of POPS data.
 
 Analysis tools are ONLY compatible with the postcorrected POPS datasets are publically available on the ARM Data Discovery:
-https://adc.arm.gov/discovery/#/results/iopShortName::amf2021SAILCAIVIMT/instrument_code::pops 
-as netCDF files.
+https://doi.org/10.5439/2203692) as netCDF files.
 """
 
 

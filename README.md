@@ -8,7 +8,7 @@ This network enables the investigation of small-scale variations in complex terr
 
 ### Introduction to the dataset and code
 
-The code here can be used to preform basic spatiotemporal data analysis and visualization of the POPS data, which are available on the [ARM Data Discovery](https://adc.arm.gov/discovery/#/results/iopShortName::amf2021SAILCAIVIMT/instrument_code::pops) as netCDF files.
+The code here can be used to preform basic spatiotemporal data analysis and visualization of the POPS data, which are available on the [ARM Data Discovery](https://doi.org/10.5439/2203692) as netCDF files.
 These POPS data consist of over 1.5 years of aerosol size data (specifically PM 2.5) at 5 second resolution.
 The POPS itself measures aerosol at 1 second frequency, the but data to be used with this code have been postcorrected, cleaned, and subsampled to 5-second resolution for speed of analysis.
 This is the code that I have used for all data analysis thus far, and my hope is this code can be used by others as a foundation for further analysis of this valuable dataset. 
@@ -20,7 +20,7 @@ From there, all analysis can be done in the main.py file.
 In its current state, the main.py file provides an example of how one would work with the code.
 
 To view the analysis and figures associated with the SAIL-Net paper "SAIL-Net: An investigation of the spatiotemporalvariability of aerosol in the mountainous terrain of the Upper Colorado River Basin" (Gibson, et al., 2024), run the code in acp_figures_and_analysis.py. 
-This code will produce all figures and analysis of the paper, except for the figures and analysis associated with the comparison to TBS data. To see these figures, download the [TBS data](https://adc.arm.gov/discovery/#/results/s::tbspops) from the ARM Data Discovery, put it in a directory called ''TBS_data'' and run the TBSAnalysis.py file.
+This code will produce all figures and analysis of the paper, except for the figures and analysis associated with the comparison to TBS data. To see these figures, download the [TBS data](https://doi.org/10.5439/1827703) in Gunnison from the ARM Data Discovery, put it in a directory called ''TBS_data'' and run the TBSAnalysis.py file.
 
 
 ### A note to the user

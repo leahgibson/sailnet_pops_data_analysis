@@ -4,7 +4,7 @@ Code to generate figures in SAIL-Net: An investigation of the spatiotemporal var
 mountainous terrain of the Upper Colorado River Basin by Gibson et al.
 
 Data are accessible on the ARM Data Discovery website:
-https://adc.arm.gov/discovery/#/results/iopShortName::amf2021SAILCAIVIMT/instrument_code::pops 
+https://doi.org/10.5439/2203692
 """
 
 # import packages
