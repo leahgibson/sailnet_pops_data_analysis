@@ -32,18 +32,7 @@ plt.rcParams.update({
 })
 
 
-"""
-User set up:
 
-    The parameters "flight_date" and "flight_filename" grant the ability to select either 
-    1) a specific date of files to analyze (if file_date is entered) OR
-    2) a specific file to analyze (if the flight_filename) is entered.
-    
-    If both fields are left as blank strings, the analysis will proceed for all flights.
-"""
-
-flight_date = ''
-flight_filename = ''#'guctbspopsS4.b1.20230614.131000.nc'
 
 
 ### functions ###
@@ -337,7 +326,6 @@ def compute_error(tbs_data, data_dict, day):
     plt.xlabel('Concentration cm$^{-3}$')
     plt.ylabel('Altitude (m)')
     plt.title(day)
-    plt.savefig(f'{day}.png')
     plt.show()
     
     
@@ -361,122 +349,106 @@ def compute_error(tbs_data, data_dict, day):
 
 sites = ['pumphouse', 'gothic', 'cbmid', 'irwin', 'snodgrass', 'cbtop']
 
-if flight_filename != '':
-    # procedd with analysis for just this file
-    flight_df = load_tbs_data(flight_filename)
-    #print(flight_df)
 
-elif flight_date != '':
-    # procedd with analysis for all flights during this day
-    filenames = get_day_filenames(flight_date)
+# proceed with analysis for all data
+filenames = get_all_filenames()
 
-else:
-    # proceed with analysis for all data
-    filenames = get_all_filenames()
+headers = ['date'] + sites
+# date df for storing errors
+avg_percent_errors_df = pd.DataFrame(columns=headers)
+median_percent_errors_df = pd.DataFrame(columns=headers)
+avg_absolute_errors_df = pd.DataFrame(columns=headers)
+median_absolute_errors_df = pd.DataFrame(columns=headers)
 
-    headers = ['date'] + sites
-    # date df for storing errors
-    avg_percent_errors_df = pd.DataFrame(columns=headers)
-    median_percent_errors_df = pd.DataFrame(columns=headers)
-    avg_absolute_errors_df = pd.DataFrame(columns=headers)
-    median_absolute_errors_df = pd.DataFrame(columns=headers)
+# analyze one by one
+for tbs_filename in filenames:
+    print(tbs_filename)
+    # pull out identifying data
+    site_code = tbs_filename.split('.')[1][-2:]
+    yyyymmdd = re.search(r'\d{8}', tbs_filename).group()
 
-    # analyze one by one
-    for tbs_filename in filenames:
-        print(tbs_filename)
-        # pull out identifying data
-        site_code = tbs_filename.split('.')[1][-2:]
-        yyyymmdd = re.search(r'\d{8}', tbs_filename).group()
+    # load & clean tbs data
+    tbs_data = load_tbs_data(tbs_filename)
+    tbs_data, start_time, end_time = process_tbs(tbs_data)
 
-        # load & clean tbs data
-        tbs_data = load_tbs_data(tbs_filename)
-        tbs_data, start_time, end_time = process_tbs(tbs_data)
+    # load SAIL-Net data for given date (this is slow, maybe fix later)
+    dr = POPSDataRetrival()
+    groupings = dataGroupings()
+    data_dict = dr.create_datasets(sites=sites, start_date=yyyymmdd, end_date=yyyymmdd, subsample=None)
 
-        # load SAIL-Net data for given date (this is slow, maybe fix later)
-        dr = POPSDataRetrival()
-        groupings = dataGroupings()
-        data_dict = dr.create_datasets(sites=sites, start_date=yyyymmdd, end_date=yyyymmdd, subsample=None)
-
-        grouped_data = {}
-        for site, df in data_dict.items():
-            df = groupings.bin_groupings(df, grouping_option=2)
-            df = df[(df['DateTime'] > start_time) & (df['DateTime'] < end_time)]
-            grouped_data[site] = df
-        
-        # compute error
-        avg_percent_errors, average_absolute_errors = compute_error(tbs_data, grouped_data, day=yyyymmdd)
-        
-        # append to df
-        avg_percent_errors_df = avg_percent_errors_df.append(avg_percent_errors, ignore_index=True)
-        avg_absolute_errors_df = avg_absolute_errors_df.append(average_absolute_errors, ignore_index=True)
- 
-
-    # convert dates to datetimes
-    avg_percent_errors_df['date']= pd.to_datetime(avg_percent_errors_df['date'])
-    avg_absolute_errors_df['date']= pd.to_datetime(avg_absolute_errors_df['date'])
-
-
-
-    # group by dates and compute median for that site for that day
-    #daily_site_mean = avg_errors_df.groupby('date').mean()
-    daily_site_median_percent = avg_percent_errors_df.groupby('date').median()
-    daily_site_median_absolute = avg_absolute_errors_df.groupby('date').median()
-
-
-    # colorblind colors
-    colors = ['#377eb8', '#ff7f00', '#4daf4a',
-            '#f781bf', '#a65628', '#984ea3',
-            '#999999', '#e41a1c', '#dede00']
+    grouped_data = {}
+    for site, df in data_dict.items():
+        df = groupings.bin_groupings(df, grouping_option=2)
+        df = df[(df['DateTime'] > start_time) & (df['DateTime'] < end_time)]
+        grouped_data[site] = df
     
-
-    # average site medians across that date
-    row_means_percent = daily_site_median_percent.mean(axis=1)
-    # compute median of sites medians across that date
-    row_medians_percent = daily_site_median_percent.median(axis=1)
-
-    row_means_absolute = daily_site_median_absolute.mean(axis=1)
-    row_medians_absolute = daily_site_median_absolute.median(axis=1)
-
-
+    # compute error
+    avg_percent_errors, average_absolute_errors = compute_error(tbs_data, grouped_data, day=yyyymmdd)
     
-    # plot means
-    # clear any remaining plot data
-    plt.clf()
-
-    fig, ax = plt.subplots(nrows=2, sharex=True, figsize=(6,3), dpi=300)
-    ax[0].plot(row_means_percent, marker='o', linestyle='None', color='#377eb8', label='Mean Error')
-    ax[0].plot(row_medians_percent, marker='^', linestyle='None', color='#ff7f00', label='Median Error')
-    ax[0].set_ylabel('Percent Error')
-    
-    ax[1].plot(row_means_absolute, marker='o', linestyle='None', color='#377eb8', label='Mean Error')
-    ax[1].plot(row_medians_absolute, marker='^', linestyle='None', color='#ff7f00', label='Median Error')
-    ax[1].set_ylabel('Absolute Error')
-    ax[1].set_xlabel('UTC')
-    plt.legend()
-    plt.show()
+    # append to df
+    avg_percent_errors_df = avg_percent_errors_df.append(avg_percent_errors, ignore_index=True)
+    avg_absolute_errors_df = avg_absolute_errors_df.append(average_absolute_errors, ignore_index=True)
 
 
-    #### TO DO:
-
-    # replot for % and normal, scaling to half the screen
-    # compute median of the data instead of the mean
+# convert dates to datetimes
+avg_percent_errors_df['date']= pd.to_datetime(avg_percent_errors_df['date'])
+avg_absolute_errors_df['date']= pd.to_datetime(avg_absolute_errors_df['date'])
 
 
 
-        
-        
-        
-
-   
-
+# group by dates and compute median for that site for that day
+#daily_site_mean = avg_errors_df.groupby('date').mean()
+daily_site_median_percent = avg_percent_errors_df.groupby('date').median()
+daily_site_median_absolute = avg_absolute_errors_df.groupby('date').median()
 
 
+# colorblind colors
+colors = ['#377eb8', '#ff7f00', '#4daf4a',
+        '#f781bf', '#a65628', '#984ea3',
+        '#999999', '#e41a1c', '#dede00']
 
 
+# average site medians across that date
+row_means_percent = daily_site_median_percent.mean(axis=1)
+# compute median of sites medians across that date
+row_medians_percent = daily_site_median_percent.median(axis=1)
+
+row_means_absolute = daily_site_median_absolute.mean(axis=1)
+row_medians_absolute = daily_site_median_absolute.median(axis=1)
+
+
+
+# plot means
+# clear any remaining plot data
+plt.clf()
+
+fig, ax = plt.subplots(nrows=2, sharex=True, figsize=(6,3), dpi=300)
+ax[0].plot(row_means_percent, marker='o', linestyle='None', color='#377eb8', label='Mean Error')
+ax[0].plot(row_medians_percent, marker='^', linestyle='None', color='#ff7f00', label='Median Error')
+ax[0].set_ylabel('Percent Error')
+
+ax[1].plot(row_means_absolute, marker='o', linestyle='None', color='#377eb8', label='Mean Error')
+ax[1].plot(row_medians_absolute, marker='^', linestyle='None', color='#ff7f00', label='Median Error')
+ax[1].set_ylabel('Absolute Error')
+ax[1].set_xlabel('UTC')
+plt.legend()
+plt.show()
 
 
 
     
+    
+
+
+
+
+
+
+
+
+
+
+
 
 
 

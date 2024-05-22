@@ -20,7 +20,7 @@ From there, all analysis can be done in the main.py file.
 In its current state, the main.py file provides an example of how one would work with the code.
 
 To view the analysis and figures associated with the SAIL-Net paper "SAIL-Net: An investigation of the spatiotemporalvariability of aerosol in the mountainous terrain of the Upper Colorado River Basin" (Gibson, et al., 2024), run the code in acp_figures_and_analysis.py. 
-This code will produce all figures and analysis of the paper, except for the figures and analysis associated with the comparison to TBS data. To see these figures, download the [TBS data]{https://adc.arm.gov/discovery/#/results/s::tbspops} from the ARM Data Discovery, put it in a directory called ''TBS_data'' and run the TBSAnalysis.py file.
+This code will produce all figures and analysis of the paper, except for the figures and analysis associated with the comparison to TBS data. To see these figures, download the [TBS data](https://adc.arm.gov/discovery/#/results/s::tbspops) from the ARM Data Discovery, put it in a directory called ''TBS_data'' and run the TBSAnalysis.py file.
 
 
 ### A note to the user
